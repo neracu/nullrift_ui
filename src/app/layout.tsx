@@ -6,9 +6,15 @@ import { cn } from "@/lib/utils";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "NullRift UI - AI-Powered Component Generator",
-  description: "Generate production-ready UI components with AI in seconds",
-  keywords: ["AI", "UI", "components", "React", "Next.js", "watsonx.ai"],
+  title: "NullRift UI - AI-Powered Component Designer",
+  description: "Turn ideas into interactive UI in seconds. AI-powered component designer with instant code export. Powered by watsonx.ai.",
+  keywords: ["AI", "UI", "components", "React", "Next.js", "watsonx.ai", "code generation"],
+  authors: [{ name: "NullRift Team" }],
+  openGraph: {
+    title: "NullRift UI - AI-Powered Component Designer",
+    description: "Turn ideas into interactive UI in seconds",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -17,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={cn(inter.className, "min-h-screen bg-background antialiased")}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={cn(inter.className, "min-h-screen bg-deep-space antialiased")}>
         {children}
       </body>
     </html>

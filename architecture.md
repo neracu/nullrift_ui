@@ -661,7 +661,7 @@ gantt
 
 ---
 
-#### **Sprint 2: Landing Page (Hours 6-15, Parallel Track)**
+#### **Sprint 2: Landing Page (Hours 6-15, Parallel Track)** (done)
 
 **Frontend Team Tasks:**
 - [ ] Design and implement hero section with Aceternity Background Beams
