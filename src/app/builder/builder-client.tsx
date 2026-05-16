@@ -8,6 +8,7 @@ import { GenerationLoading } from "@/components/builder/generation-loading";
 import { GenerationError } from "@/components/builder/generation-error";
 import { PreviewCanvas } from "@/components/builder/preview-canvas";
 import { TuningPanel } from "@/components/builder/tuning-panel";
+import { ExportModal } from "@/components/builder/export-modal";
 import { Button } from "@/components/ui/button";
 import type { ComponentSchema } from "@/lib/watsonx/types";
 
@@ -38,6 +39,7 @@ export function BuilderClient() {
   const [currentSchema, setCurrentSchema] = useState<ComponentSchema | null>(null);
   const [currentCode, setCurrentCode] = useState<string>("");
   const [showTuningPanel, setShowTuningPanel] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [lastPrompt, setLastPrompt] = useState<string>("");
   const [errorState, setErrorState] = useState<{
     error: string;
@@ -177,6 +179,7 @@ export function BuilderClient() {
                     onError={(error) => {
                       console.error('Preview error:', error);
                     }}
+                    onExport={() => setShowExportModal(true)}
                   />
 
                   {/* Generated Code */}
@@ -216,6 +219,15 @@ export function BuilderClient() {
           )}
         </div>
       </main>
+
+      {/* Export Modal */}
+      {currentSchema && (
+        <ExportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          schema={currentSchema}
+        />
+      )}
     </div>
   );
 }

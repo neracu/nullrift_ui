@@ -78,6 +78,9 @@ export interface PreviewProps {
   /** Initial preview state */
   initialState?: Partial<PreviewState>;
   
+  /** Export handler */
+  onExport?: () => void;
+  
   /** Callback when state changes */
   onStateChange?: (state: PreviewState) => void;
   

@@ -26,7 +26,8 @@ export function PreviewCanvas({
   initialState,
   onStateChange,
   onError,
-  onSubmit
+  onSubmit,
+  onExport
 }: PreviewProps) {
   // Use preview hook for state management
   const preview = usePreview(schema, {
@@ -47,10 +48,9 @@ export function PreviewCanvas({
     });
   };
 
-  // Handle export (placeholder)
+  // Handle export
   const handleExport = () => {
-    console.log('Export functionality coming soon');
-    // Will be implemented in Sprint 6
+    onExport?.();
   };
 
   return (

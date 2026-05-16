@@ -762,7 +762,7 @@ gantt
 
 ---
 
-#### **Sprint 5: UX Tuning Panel (Hours 27-36)**
+#### **Sprint 5: UX Tuning Panel (Hours 27-36)** (done)
 
 **Frontend Team Tasks:**
 - [ ] Design tuning panel in [`src/components/builder/tuning-panel.tsx`](src/components/builder/tuning-panel.tsx)
