@@ -1,0 +1,635 @@
+/**
+ * Dynamic Component Renderer
+ * 
+ * Converts ComponentSchema to interactive React elements using React.createElement().
+ * Handles form state, validation, and user interactions.
+ */
+
+import React, { type ReactElement, type FormEvent } from 'react';
+import type { ComponentSchema, FieldDefinition } from '../watsonx/types';
+import type { RendererProps, PreviewTheme } from './types';
+import { cn } from '../utils';
+
+/**
+ * Main Dynamic Renderer Component
+ * 
+ * Renders a component from schema with full interactivity
+ */
+export function DynamicRenderer({
+  schema,
+  formData,
+  errors,
+  theme,
+  onFieldChange,
+  onSubmit,
+  onValidationError
+}: RendererProps): ReactElement {
+  // Handle form submission
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  // Build field elements
+  const fieldElements = schema.fields.map((field) => {
+    // Check if field should be shown (conditional rendering)
+    if (field.conditional && !shouldShowField(field, formData)) {
+      return null;
+    }
+
+    return (
+      <div key={field.id} className="space-y-2">
+        {createFieldElement(field, formData, errors, theme, onFieldChange)}
+      </div>
+    );
+  });
+
+  // Apply layout
+  const layoutElement = applyLayout(fieldElements, schema.layout);
+
+  // Apply styling and wrap in form
+  return createFormWrapper(
+    layoutElement,
+    schema,
+    theme,
+    handleSubmit
+  );
+}
+
+/**
+ * Check if conditional field should be shown
+ */
+function shouldShowField(
+  field: FieldDefinition,
+  formData: Record<string, any>
+): boolean {
+  if (!field.conditional) return true;
+
+  const { field: conditionField, value: conditionValue } = field.conditional;
+  const actualValue = formData[conditionField];
+
+  return actualValue === conditionValue;
+}
+
+/**
+ * Create field element based on type
+ */
+function createFieldElement(
+  field: FieldDefinition,
+  formData: Record<string, any>,
+  errors: Record<string, string>,
+  theme: PreviewTheme,
+  onFieldChange: (fieldId: string, value: any) => void
+): ReactElement {
+  const value = formData[field.id] ?? '';
+  const error = errors[field.id];
+  const isRequired = field.validation?.required ?? false;
+
+  switch (field.type) {
+    case 'input':
+      return createInputField(field, value, error, theme, isRequired, onFieldChange);
+    
+    case 'textarea':
+      return createTextareaField(field, value, error, theme, isRequired, onFieldChange);
+    
+    case 'select':
+      return createSelectField(field, value, error, theme, isRequired, onFieldChange);
+    
+    case 'checkbox':
+      return createCheckboxField(field, value, error, theme, onFieldChange);
+    
+    case 'radio':
+      return createRadioField(field, value, error, theme, isRequired, onFieldChange);
+    
+    case 'date':
+      return createDateField(field, value, error, theme, isRequired, onFieldChange);
+    
+    case 'file':
+      return createFileField(field, value, error, theme, isRequired, onFieldChange);
+    
+    default:
+      return createInputField(field, value, error, theme, isRequired, onFieldChange);
+  }
+}
+
+/**
+ * Create input field
+ */
+function createInputField(
+  field: FieldDefinition,
+  value: any,
+  error: string | undefined,
+  theme: PreviewTheme,
+  isRequired: boolean,
+  onFieldChange: (fieldId: string, value: any) => void
+): ReactElement {
+  const inputClasses = cn(
+    'w-full px-3 py-2 rounded-md border transition-colors',
+    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    theme === 'dark'
+      ? 'bg-slate-900 border-slate-700 text-slate-100'
+      : 'bg-white border-slate-300 text-slate-900',
+    error && 'border-red-500 focus:ring-red-500'
+  );
+
+  return (
+    <>
+      <label
+        htmlFor={field.id}
+        className={cn(
+          'block text-sm font-medium mb-1',
+          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
+        )}
+      >
+        {field.label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <input
+        id={field.id}
+        type="text"
+        value={value}
+        placeholder={field.placeholder}
+        className={inputClasses}
+        required={isRequired}
+        onChange={(e) => onFieldChange(field.id, e.target.value)}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      {error && (
+        <p
+          id={`${field.id}-error`}
+          className="text-sm text-red-500 mt-1"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Create textarea field
+ */
+function createTextareaField(
+  field: FieldDefinition,
+  value: any,
+  error: string | undefined,
+  theme: PreviewTheme,
+  isRequired: boolean,
+  onFieldChange: (fieldId: string, value: any) => void
+): ReactElement {
+  const textareaClasses = cn(
+    'w-full px-3 py-2 rounded-md border transition-colors resize-y',
+    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    theme === 'dark'
+      ? 'bg-slate-900 border-slate-700 text-slate-100'
+      : 'bg-white border-slate-300 text-slate-900',
+    error && 'border-red-500 focus:ring-red-500'
+  );
+
+  return (
+    <>
+      <label
+        htmlFor={field.id}
+        className={cn(
+          'block text-sm font-medium mb-1',
+          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
+        )}
+      >
+        {field.label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <textarea
+        id={field.id}
+        value={value}
+        placeholder={field.placeholder}
+        className={textareaClasses}
+        required={isRequired}
+        rows={4}
+        onChange={(e) => onFieldChange(field.id, e.target.value)}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      {error && (
+        <p
+          id={`${field.id}-error`}
+          className="text-sm text-red-500 mt-1"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Create select field
+ */
+function createSelectField(
+  field: FieldDefinition,
+  value: any,
+  error: string | undefined,
+  theme: PreviewTheme,
+  isRequired: boolean,
+  onFieldChange: (fieldId: string, value: any) => void
+): ReactElement {
+  const selectClasses = cn(
+    'w-full px-3 py-2 rounded-md border transition-colors',
+    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    theme === 'dark'
+      ? 'bg-slate-900 border-slate-700 text-slate-100'
+      : 'bg-white border-slate-300 text-slate-900',
+    error && 'border-red-500 focus:ring-red-500'
+  );
+
+  return (
+    <>
+      <label
+        htmlFor={field.id}
+        className={cn(
+          'block text-sm font-medium mb-1',
+          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
+        )}
+      >
+        {field.label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <select
+        id={field.id}
+        value={value}
+        className={selectClasses}
+        required={isRequired}
+        onChange={(e) => onFieldChange(field.id, e.target.value)}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      >
+        {field.placeholder && (
+          <option value="" disabled>
+            {field.placeholder}
+          </option>
+        )}
+        {field.options?.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {error && (
+        <p
+          id={`${field.id}-error`}
+          className="text-sm text-red-500 mt-1"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Create checkbox field
+ */
+function createCheckboxField(
+  field: FieldDefinition,
+  value: any,
+  error: string | undefined,
+  theme: PreviewTheme,
+  onFieldChange: (fieldId: string, value: any) => void
+): ReactElement {
+  const checked = Boolean(value);
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <input
+          id={field.id}
+          type="checkbox"
+          checked={checked}
+          className={cn(
+            'w-4 h-4 rounded border transition-colors',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500',
+            theme === 'dark'
+              ? 'bg-slate-900 border-slate-700'
+              : 'bg-white border-slate-300',
+            error && 'border-red-500'
+          )}
+          onChange={(e) => onFieldChange(field.id, e.target.checked)}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${field.id}-error` : undefined}
+        />
+        <label
+          htmlFor={field.id}
+          className={cn(
+            'text-sm font-medium',
+            theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
+          )}
+        >
+          {field.label}
+        </label>
+      </div>
+      {error && (
+        <p
+          id={`${field.id}-error`}
+          className="text-sm text-red-500 mt-1"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Create radio field
+ */
+function createRadioField(
+  field: FieldDefinition,
+  value: any,
+  error: string | undefined,
+  theme: PreviewTheme,
+  isRequired: boolean,
+  onFieldChange: (fieldId: string, value: any) => void
+): ReactElement {
+  return (
+    <>
+      <fieldset>
+        <legend
+          className={cn(
+            'block text-sm font-medium mb-2',
+            theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
+          )}
+        >
+          {field.label}
+          {isRequired && <span className="text-red-500 ml-1">*</span>}
+        </legend>
+        <div className="space-y-2">
+          {field.options?.map((option) => (
+            <div key={option.value} className="flex items-center gap-2">
+              <input
+                id={`${field.id}-${option.value}`}
+                type="radio"
+                name={field.id}
+                value={option.value}
+                checked={value === option.value}
+                className={cn(
+                  'w-4 h-4 border transition-colors',
+                  'focus:outline-none focus:ring-2 focus:ring-blue-500',
+                  theme === 'dark'
+                    ? 'bg-slate-900 border-slate-700'
+                    : 'bg-white border-slate-300'
+                )}
+                onChange={(e) => onFieldChange(field.id, e.target.value)}
+                aria-invalid={!!error}
+              />
+              <label
+                htmlFor={`${field.id}-${option.value}`}
+                className={cn(
+                  'text-sm',
+                  theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
+                )}
+              >
+                {option.label}
+              </label>
+            </div>
+          ))}
+        </div>
+      </fieldset>
+      {error && (
+        <p
+          id={`${field.id}-error`}
+          className="text-sm text-red-500 mt-1"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Create date field
+ */
+function createDateField(
+  field: FieldDefinition,
+  value: any,
+  error: string | undefined,
+  theme: PreviewTheme,
+  isRequired: boolean,
+  onFieldChange: (fieldId: string, value: any) => void
+): ReactElement {
+  const inputClasses = cn(
+    'w-full px-3 py-2 rounded-md border transition-colors',
+    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    theme === 'dark'
+      ? 'bg-slate-900 border-slate-700 text-slate-100'
+      : 'bg-white border-slate-300 text-slate-900',
+    error && 'border-red-500 focus:ring-red-500'
+  );
+
+  return (
+    <>
+      <label
+        htmlFor={field.id}
+        className={cn(
+          'block text-sm font-medium mb-1',
+          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
+        )}
+      >
+        {field.label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <input
+        id={field.id}
+        type="date"
+        value={value}
+        className={inputClasses}
+        required={isRequired}
+        onChange={(e) => onFieldChange(field.id, e.target.value)}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      {error && (
+        <p
+          id={`${field.id}-error`}
+          className="text-sm text-red-500 mt-1"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Create file field
+ */
+function createFileField(
+  field: FieldDefinition,
+  value: any,
+  error: string | undefined,
+  theme: PreviewTheme,
+  isRequired: boolean,
+  onFieldChange: (fieldId: string, value: any) => void
+): ReactElement {
+  const inputClasses = cn(
+    'w-full px-3 py-2 rounded-md border transition-colors',
+    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    'file:mr-4 file:py-1 file:px-3 file:rounded file:border-0',
+    'file:text-sm file:font-medium',
+    theme === 'dark'
+      ? 'bg-slate-900 border-slate-700 text-slate-100 file:bg-slate-800 file:text-slate-200'
+      : 'bg-white border-slate-300 text-slate-900 file:bg-slate-100 file:text-slate-700',
+    error && 'border-red-500 focus:ring-red-500'
+  );
+
+  return (
+    <>
+      <label
+        htmlFor={field.id}
+        className={cn(
+          'block text-sm font-medium mb-1',
+          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
+        )}
+      >
+        {field.label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <input
+        id={field.id}
+        type="file"
+        className={inputClasses}
+        required={isRequired}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          onFieldChange(field.id, file?.name || '');
+        }}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${field.id}-error` : undefined}
+      />
+      {error && (
+        <p
+          id={`${field.id}-error`}
+          className="text-sm text-red-500 mt-1"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Apply layout to field elements
+ */
+function applyLayout(
+  fieldElements: (ReactElement | null)[],
+  layout: ComponentSchema['layout']
+): ReactElement {
+  const validFields = fieldElements.filter(Boolean);
+
+  switch (layout) {
+    case 'single-column':
+      return <div className="space-y-4">{validFields}</div>;
+
+    case 'two-column':
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {validFields}
+        </div>
+      );
+
+    case 'grid':
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {validFields}
+        </div>
+      );
+
+    case 'custom':
+    default:
+      return <div className="space-y-4">{validFields}</div>;
+  }
+}
+
+/**
+ * Create form wrapper with styling
+ */
+function createFormWrapper(
+  content: ReactElement,
+  schema: ComponentSchema,
+  theme: PreviewTheme,
+  onSubmit: (e: FormEvent<HTMLFormElement>) => void
+): ReactElement {
+  const { styling } = schema;
+  const spacing = styling.spacing || 'normal';
+  
+  const spacingClasses = {
+    compact: 'p-4',
+    normal: 'p-6',
+    relaxed: 'p-8'
+  };
+
+  const formClasses = cn(
+    'w-full max-w-2xl mx-auto rounded-lg border',
+    spacingClasses[spacing],
+    theme === 'dark'
+      ? 'bg-slate-900 border-slate-800'
+      : 'bg-white border-slate-200'
+  );
+
+  return (
+    <form onSubmit={onSubmit} className={formClasses} noValidate>
+      {/* Form Title */}
+      {schema.name && (
+        <h2
+          className={cn(
+            'text-2xl font-semibold mb-6',
+            theme === 'dark' ? 'text-slate-100' : 'text-slate-900'
+          )}
+        >
+          {schema.name}
+        </h2>
+      )}
+
+      {/* Form Description */}
+      {schema.description && (
+        <p
+          className={cn(
+            'text-sm mb-6',
+            theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
+          )}
+        >
+          {schema.description}
+        </p>
+      )}
+
+      {/* Form Fields */}
+      {content}
+
+      {/* Submit Button */}
+      <div className="mt-6">
+        <button
+          type="submit"
+          className={cn(
+            'w-full px-4 py-2 rounded-md font-medium transition-colors',
+            'focus:outline-none focus:ring-2 focus:ring-offset-2',
+            theme === 'dark'
+              ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
+              : 'bg-blue-500 hover:bg-blue-600 text-white focus:ring-blue-500'
+          )}
+        >
+          Submit
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// Made with Bob

@@ -6,7 +6,9 @@ import { ArrowLeft } from "lucide-react";
 import { PromptInput } from "@/components/builder/prompt-input";
 import { GenerationLoading } from "@/components/builder/generation-loading";
 import { GenerationError } from "@/components/builder/generation-error";
+import { PreviewCanvas } from "@/components/builder/preview-canvas";
 import { Button } from "@/components/ui/button";
+import type { ComponentSchema } from "@/lib/watsonx/types";
 
 type BuilderPhase = "idle" | "loading" | "error" | "success";
 
@@ -21,14 +23,17 @@ interface GenerateErrorJson {
 interface GenerateSuccessJson {
   success: true;
   code: string;
+  schema: ComponentSchema;
+  metadata?: any;
 }
 
 /**
- * Client-side builder: prompt → POST /api/generate → code display with loading and error states.
+ * Client-side builder: prompt → POST /api/generate → interactive preview with code display.
  */
 export function BuilderClient() {
   const [phase, setPhase] = useState<BuilderPhase>("idle");
   const [generatedCode, setGeneratedCode] = useState<string>("");
+  const [generatedSchema, setGeneratedSchema] = useState<ComponentSchema | null>(null);
   const [lastPrompt, setLastPrompt] = useState<string>("");
   const [errorState, setErrorState] = useState<{
     error: string;
@@ -42,6 +47,7 @@ export function BuilderClient() {
     setPhase("loading");
     setErrorState(null);
     setGeneratedCode("");
+    setGeneratedSchema(null);
 
     try {
       const response = await fetch("/api/generate", {
@@ -65,8 +71,9 @@ export function BuilderClient() {
       }
 
       const okBody = body as GenerateSuccessJson;
-      if (okBody.success === true && typeof okBody.code === "string") {
+      if (okBody.success === true && typeof okBody.code === "string" && okBody.schema) {
         setGeneratedCode(okBody.code);
+        setGeneratedSchema(okBody.schema);
         setPhase("success");
         return;
       }
@@ -136,23 +143,38 @@ export function BuilderClient() {
             />
           )}
 
-          {phase === "success" && generatedCode && (
-            <div className="rounded-xl border border-white/10 bg-black/30 p-4 shadow-inner sm:p-6">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h2 className="text-sm font-medium text-muted-foreground sm:text-base">Generated code</h2>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="border-white/20"
-                  onClick={() => void navigator.clipboard.writeText(generatedCode)}
-                >
-                  Copy
-                </Button>
+          {phase === "success" && generatedCode && generatedSchema && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Interactive Preview */}
+              <PreviewCanvas
+                schema={generatedSchema}
+                code={generatedCode}
+                onSubmit={(data) => {
+                  console.log('Form submitted:', data);
+                }}
+                onError={(error) => {
+                  console.error('Preview error:', error);
+                }}
+              />
+
+              {/* Generated Code */}
+              <div className="rounded-xl border border-white/10 bg-black/30 p-4 shadow-inner sm:p-6">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-medium text-muted-foreground sm:text-base">Generated Code</h2>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-white/20"
+                    onClick={() => void navigator.clipboard.writeText(generatedCode)}
+                  >
+                    Copy
+                  </Button>
+                </div>
+                <pre className="max-h-[min(70vh,720px)] overflow-auto rounded-lg bg-black/50 p-4 text-left text-xs leading-relaxed text-emerald-100/90 sm:text-sm">
+                  <code>{generatedCode}</code>
+                </pre>
               </div>
-              <pre className="max-h-[min(70vh,720px)] overflow-auto rounded-lg bg-black/50 p-4 text-left text-xs leading-relaxed text-emerald-100/90 sm:text-sm">
-                <code>{generatedCode}</code>
-              </pre>
             </div>
           )}
         </div>
