@@ -5,7 +5,11 @@
  * style overrides, structure changes, behavior settings, and history management.
  */
 
-import type { ComponentSchema, FieldDefinition } from '@/lib/watsonx/types';
+import type {
+  ComponentSchema,
+  ComponentSchemaMetaPatch,
+  FieldDefinition,
+} from '@/lib/watsonx/types';
 
 /**
  * Complete tuning state for a component
@@ -63,6 +67,13 @@ export interface StyleOverrides {
   
   /** Font size preset */
   fontSize?: 'sm' | 'base' | 'lg';
+
+  /** Submit button look (mirrors StylingConfig.submitButtonVariant). */
+  submitButtonVariant?: 'solid' | 'outline' | 'ghost' | 'secondary';
+  /** Submit button size (mirrors StylingConfig.submitButtonSize). */
+  submitButtonSize?: 'sm' | 'default' | 'lg';
+  /** Full-width submit row vs intrinsic width. */
+  submitButtonFullWidth?: boolean;
   
   // Custom
   /** Additional Tailwind classes */
@@ -104,9 +115,15 @@ export interface StructureChanges {
   
   /** New order of field IDs (if reordered) */
   fieldsReordered: string[];
-  
+
+  /** Full layer order including SUBMIT_BUTTON_LAYER_ID (optional; overrides submit-at-end only). */
+  layerOrder?: string[];
+
   /** Modifications to existing fields */
   fieldsModified: Record<string, Partial<FieldDefinition>>;
+
+  /** Overrides for component title, description, and submit button label (preview + export). */
+  schemaMetaModified: ComponentSchemaMetaPatch;
   
   /** Layout change (if any) */
   layoutChanged?: 'single-column' | 'two-column' | 'grid' | 'custom';
@@ -292,9 +309,15 @@ export interface UseTuningReturn {
 
   /** Reorder fields */
   reorderFields: (newOrder: string[]) => void;
-  
+
+  /** Reorder structure layers (field ids + submit token). */
+  reorderLayers: (newOrder: string[]) => void;
+
   /** Modify field properties */
   modifyField: (fieldId: string, changes: Partial<FieldDefinition>) => void;
+
+  /** Update schema title, description, or submit button label (structure / export). */
+  modifySchemaMeta: (changes: ComponentSchemaMetaPatch) => void;
   
   /** Change layout */
   changeLayout: (layout: 'single-column' | 'two-column' | 'grid' | 'custom') => void;
@@ -392,6 +415,27 @@ export const THEME_OPTIONS = [
   { label: 'Dark', value: 'dark' as const },
 ] as const;
 
+/** Submit button style presets for UX tuning. */
+export const SUBMIT_BUTTON_VARIANT_OPTIONS = [
+  { label: 'Solid (primary)', value: 'solid' as const },
+  { label: 'Outline', value: 'outline' as const },
+  { label: 'Ghost', value: 'ghost' as const },
+  { label: 'Secondary fill', value: 'secondary' as const },
+] as const;
+
+/** Submit button size presets. */
+export const SUBMIT_BUTTON_SIZE_OPTIONS = [
+  { label: 'Small', value: 'sm' as const },
+  { label: 'Medium', value: 'default' as const },
+  { label: 'Large', value: 'lg' as const },
+] as const;
+
+/** Submit button width mode. */
+export const SUBMIT_BUTTON_WIDTH_OPTIONS = [
+  { label: 'Full width', value: true as const },
+  { label: 'Auto width', value: false as const },
+] as const;
+
 /**
  * Curated SaaS-safe palettes for one-click color application in the tuning panel.
  */
@@ -460,6 +504,9 @@ export const STYLE_PANEL_RESET_VALUES: Partial<StyleOverrides> = {
   textColor: undefined,
   theme: undefined,
   customClasses: undefined,
+  submitButtonVariant: undefined,
+  submitButtonSize: undefined,
+  submitButtonFullWidth: undefined,
 };
 
 /**
@@ -509,7 +556,9 @@ export const DEFAULT_TUNING_STATE: TuningState = {
     fieldsAdded: [],
     fieldsRemoved: [],
     fieldsReordered: [],
+    layerOrder: undefined,
     fieldsModified: {},
+    schemaMetaModified: {},
   },
   behaviorSettings: {
     validationMode: 'onBlur',

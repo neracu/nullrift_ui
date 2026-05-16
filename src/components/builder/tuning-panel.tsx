@@ -207,7 +207,7 @@ export function TuningPanel({
               onFieldSelectionChange={onFieldSelectionChange}
               onAddField={tuning.addField}
               onRemoveField={tuning.removeField}
-              onReorderFields={tuning.reorderFields}
+              onReorderLayers={tuning.reorderLayers}
               onModifyField={tuning.modifyField}
               onLayoutChange={tuning.changeLayout}
               onDuplicateFields={tuning.duplicateFields}

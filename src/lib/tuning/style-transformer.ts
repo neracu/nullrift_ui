@@ -84,6 +84,18 @@ export class StyleTransformer {
       styling.customClasses = overrides.customClasses;
     }
 
+    if ('submitButtonVariant' in overrides) {
+      styling.submitButtonVariant = overrides.submitButtonVariant;
+    }
+
+    if ('submitButtonSize' in overrides) {
+      styling.submitButtonSize = overrides.submitButtonSize;
+    }
+
+    if ('submitButtonFullWidth' in overrides) {
+      styling.submitButtonFullWidth = overrides.submitButtonFullWidth;
+    }
+
     return styling;
   }
 
@@ -365,6 +377,9 @@ export class StyleTransformer {
         fontSize: undefined,
         fontFamily: undefined,
         customClasses: [],
+        submitButtonVariant: undefined,
+        submitButtonSize: undefined,
+        submitButtonFullWidth: undefined,
       },
     };
   }

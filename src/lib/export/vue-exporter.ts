@@ -5,7 +5,13 @@
  * TypeScript support, and proper reactive state management.
  */
 
-import type { ComponentSchema, FieldDefinition } from '@/lib/watsonx/types';
+import {
+  type ComponentSchema,
+  type FieldDefinition,
+  DEFAULT_SUBMIT_BUTTON_LABEL,
+} from '@/lib/watsonx/types';
+import { resolveSubmitButtonPresentation } from '@/lib/tuning/submit-button-style';
+import { SUBMIT_BUTTON_LAYER_ID, getEffectiveLayerOrder } from '@/lib/tuning/layer-order';
 import type { 
   Exporter, 
   ExportFile, 
@@ -146,20 +152,27 @@ export class VueExporter implements Exporter {
 
     if (hasForm) {
       template += `${indent}  <form @submit.prevent="handleSubmit" class="space-y-4">\n`;
-      
-      // Render fields
-      (schema.fields || []).forEach(field => {
-        template += this.generateFieldTemplate(field, 4);
+
+      const idleSubmitLabel = schema.submitButtonLabel?.trim() || DEFAULT_SUBMIT_BUTTON_LABEL;
+      const submitButtonTemplate =
+        `${indent}    <button\n` +
+        `${indent}      type="submit"\n` +
+        `${indent}      :disabled="isSubmitting"\n` +
+        `${indent}      :class="submitButtonClass"\n` +
+        `${indent}      :style="submitButtonStyle"\n` +
+        `${indent}    >\n` +
+        `${indent}      {{ isSubmitting ? 'Submitting...' : ${JSON.stringify(idleSubmitLabel)} }}\n` +
+        `${indent}    </button>\n`;
+
+      getEffectiveLayerOrder(schema).forEach((token) => {
+        if (token === SUBMIT_BUTTON_LAYER_ID) {
+          template += submitButtonTemplate;
+          return;
+        }
+        const field = (schema.fields || []).find((f) => f.id === token);
+        if (field) template += this.generateFieldTemplate(field, 4);
       });
 
-      // Submit button
-      template += `${indent}    <button\n`;
-      template += `${indent}      type="submit"\n`;
-      template += `${indent}      :disabled="isSubmitting"\n`;
-      template += `${indent}      class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"\n`;
-      template += `${indent}    >\n`;
-      template += `${indent}      {{ isSubmitting ? 'Submitting...' : 'Submit' }}\n`;
-      template += `${indent}    </button>\n`;
       template += `${indent}  </form>\n`;
     } else {
       template += `${indent}  <h2 class="text-2xl font-bold mb-4">${componentName}</h2>\n`;
@@ -295,6 +308,7 @@ export class VueExporter implements Exporter {
       // Submit handler
       script += this.generateSubmitHandler(schema);
       script += '\n';
+      script += this.generateSubmitButtonStyleConstants(schema);
     }
 
     // Computed properties
@@ -462,6 +476,16 @@ export class VueExporter implements Exporter {
     handler += `};\n`;
 
     return handler;
+  }
+
+  /**
+   * Static submit button class + inline colors from schema tuning.
+   */
+  private generateSubmitButtonStyleConstants(schema: ComponentSchema): string {
+    const pres = resolveSubmitButtonPresentation(schema.styling);
+    return `const submitButtonClass = ${JSON.stringify(pres.className)};
+const submitButtonStyle = ${JSON.stringify(pres.style)};
+`;
   }
 
   /**

@@ -5,7 +5,13 @@
  * including types, tests, and Storybook stories.
  */
 
-import type { ComponentSchema, FieldDefinition } from '@/lib/watsonx/types';
+import {
+  type ComponentSchema,
+  type FieldDefinition,
+  DEFAULT_SUBMIT_BUTTON_LABEL,
+} from '@/lib/watsonx/types';
+import { resolveSubmitButtonPresentation } from '@/lib/tuning/submit-button-style';
+import { SUBMIT_BUTTON_LAYER_ID, getEffectiveLayerOrder } from '@/lib/tuning/layer-order';
 import type { 
   Exporter, 
   ExportFile, 
@@ -314,19 +320,36 @@ export class ReactExporter implements Exporter {
     code += `    <div className="${this.generateClassName(schema)}">\n`;
     code += `      <form onSubmit={handleSubmit} className="space-y-4">\n`;
     
-    // Render fields
-    fields.forEach(field => {
-      code += this.generateFieldJSX(field, 4);
+    const idleSubmitLabel = JSON.stringify(
+      schema.submitButtonLabel?.trim() || DEFAULT_SUBMIT_BUTTON_LABEL
+    );
+
+    const submitPres = resolveSubmitButtonPresentation(schema.styling);
+    const submitClassLiteral = JSON.stringify(submitPres.className);
+    const submitStyleLiteral = JSON.stringify(submitPres.style);
+
+    const submitButtonCode =
+      `        <button\n` +
+      `          type="submit"\n` +
+      `          disabled={isSubmitting}\n` +
+      `          className={${submitClassLiteral}}\n` +
+      `          style={${submitStyleLiteral}}\n` +
+      `        >\n` +
+      `          {isSubmitting ? 'Submitting...' : ${idleSubmitLabel}}\n` +
+      `        </button>\n`;
+
+    const layerOrder = getEffectiveLayerOrder(schema);
+    layerOrder.forEach((token) => {
+      if (token === SUBMIT_BUTTON_LAYER_ID) {
+        code += submitButtonCode;
+        return;
+      }
+      const field = schema.fields.find((f) => f.id === token);
+      if (field) {
+        code += this.generateFieldJSX(field, 4);
+      }
     });
-    
-    // Submit button
-    code += `        <button\n`;
-    code += `          type="submit"\n`;
-    code += `          disabled={isSubmitting}\n`;
-    code += `          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"\n`;
-    code += `        >\n`;
-    code += `          {isSubmitting ? 'Submitting...' : 'Submit'}\n`;
-    code += `        </button>\n`;
+
     code += `      </form>\n`;
     code += `    </div>\n`;
     code += `  );\n`;

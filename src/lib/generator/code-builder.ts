@@ -5,7 +5,12 @@
  * with TypeScript types, validation logic, and proper formatting.
  */
 
-import type { ComponentSchema, FieldDefinition, PropDefinition } from '../watsonx/types';
+import {
+  type ComponentSchema,
+  type FieldDefinition,
+  type PropDefinition,
+  DEFAULT_SUBMIT_BUTTON_LABEL,
+} from '../watsonx/types';
 
 export interface GeneratedCode {
   component: string;
@@ -140,7 +145,7 @@ export class CodeBuilder {
           type="submit"
           className="w-full px-4 py-2 bg-${schema.styling.primaryColor || 'blue-500'} text-white rounded-${schema.styling.borderRadius || 'md'} hover:opacity-90 transition-opacity"
         >
-          Submit
+          {${JSON.stringify(schema.submitButtonLabel?.trim() || DEFAULT_SUBMIT_BUTTON_LABEL)}}
         </button>
       </form>
     </div>

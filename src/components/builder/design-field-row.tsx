@@ -23,6 +23,15 @@ export interface DesignFieldRowProps {
   colSpanClass: string;
 }
 
+function isDesignInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      'input, textarea, select, button, [data-design-edit], a[href], [role="textbox"]'
+    )
+  );
+}
+
 /**
  * One sortable field row with drag handle (design mode only).
  */
@@ -78,18 +87,20 @@ export function DesignFieldRow({
           tabIndex={0}
           className="cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={(e) => {
+            if (isDesignInteractiveTarget(e.target)) return;
             e.preventDefault();
             e.stopPropagation();
             onSelect(e.metaKey || e.ctrlKey);
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
+              if (isDesignInteractiveTarget(e.target)) return;
               e.preventDefault();
               onSelect(e.metaKey || e.ctrlKey);
             }
           }}
         >
-          <div className="pointer-events-none">{children}</div>
+          <div>{children}</div>
         </div>
         {showColTool && selected && (
           <div className="pointer-events-auto mt-1 flex justify-end">

@@ -32,7 +32,10 @@ export function PreviewFrame({
   selectedFieldIds = [],
   onFieldCanvasSelect,
   onCanvasReorder,
+  onCanvasLayerReorder,
   onCycleFieldColSpan,
+  onDesignSchemaMetaChange,
+  onDesignFieldCopyChange,
 }: PreviewFrameProps) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -134,7 +137,10 @@ export function PreviewFrame({
               selectedFieldIds={selectedFieldIds}
               onFieldCanvasSelect={onFieldCanvasSelect}
               onCanvasReorder={onCanvasReorder}
+              onCanvasLayerReorder={onCanvasLayerReorder}
               onCycleFieldColSpan={onCycleFieldColSpan}
+              onDesignSchemaMetaChange={onDesignSchemaMetaChange}
+              onDesignFieldCopyChange={onDesignFieldCopyChange}
             />
           </div>
         </div>

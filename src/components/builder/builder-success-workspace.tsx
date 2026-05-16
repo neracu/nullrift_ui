@@ -213,8 +213,11 @@ export function BuilderSuccessWorkspace({
                 selectedFieldIds={selectedFieldIds}
                 onFieldCanvasSelect={onFieldCanvasSelect}
                 onCanvasReorder={onCanvasReorder}
+                onCanvasLayerReorder={tuning.reorderLayers}
                 onCycleFieldColSpan={onCycleFieldColSpan}
                 onCanvasModeChange={setCanvasMode}
+                onDesignSchemaMetaChange={tuning.modifySchemaMeta}
+                onDesignFieldCopyChange={tuning.modifyField}
                 onSubmit={(data) => {
                   console.log('Form submitted:', data);
                   toast.success('Form submitted successfully!', {

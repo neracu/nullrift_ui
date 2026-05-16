@@ -30,8 +30,11 @@ export function PreviewCanvas({
   selectedFieldIds = [],
   onFieldCanvasSelect,
   onCanvasReorder,
+  onCanvasLayerReorder,
   onCycleFieldColSpan,
   onCanvasModeChange,
+  onDesignSchemaMetaChange,
+  onDesignFieldCopyChange,
 }: PreviewProps) {
   const preview = usePreview(schema, {
     initialState,
@@ -81,7 +84,10 @@ export function PreviewCanvas({
           selectedFieldIds={selectedFieldIds}
           onFieldCanvasSelect={onFieldCanvasSelect}
           onCanvasReorder={onCanvasReorder}
+          onCanvasLayerReorder={onCanvasLayerReorder}
           onCycleFieldColSpan={onCycleFieldColSpan}
+          onDesignSchemaMetaChange={onDesignSchemaMetaChange}
+          onDesignFieldCopyChange={onDesignFieldCopyChange}
         />
       </div>
     </Card>

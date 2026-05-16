@@ -51,7 +51,10 @@ const StylingConfigSchema = z.object({
   spacing: z.enum(['compact', 'normal', 'relaxed']).optional(),
   fontFamily: z.string().optional(),
   fontSize: z.enum(['sm', 'base', 'lg']).optional(),
-  customClasses: z.array(z.string()).optional()
+  customClasses: z.array(z.string()).optional(),
+  submitButtonVariant: z.enum(['solid', 'outline', 'ghost', 'secondary']).optional(),
+  submitButtonSize: z.enum(['sm', 'default', 'lg']).optional(),
+  submitButtonFullWidth: z.boolean().optional()
 });
 
 const ValidationConfigSchema = z.object({
@@ -83,8 +86,10 @@ const ComponentSchemaValidator = z.object({
   fields: z.array(FieldDefinitionSchema),
   styling: StylingConfigSchema.default({}),
   layout: z.enum(['single-column', 'two-column', 'grid', 'custom']).default('single-column'),
+  layerOrder: z.array(z.string()).optional(),
   validation: ValidationConfigSchema.optional(),
-  state: z.array(StateDefinitionSchema).optional()
+  state: z.array(StateDefinitionSchema).optional(),
+  submitButtonLabel: z.string().optional()
 });
 
 export interface ParsedResponse {

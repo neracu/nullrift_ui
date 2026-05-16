@@ -12,6 +12,7 @@ import { normalizeFieldAdditionEntries } from '@/types/tuning';
 import { applyBehaviorToSchema } from '@/lib/tuning/behavior-schema';
 import { StructureEditor } from '@/lib/tuning/structure-editor';
 import { reconcileFieldOrderWithSchema, resolveFieldInsertIndex } from '@/lib/tuning/field-insert';
+import { SUBMIT_BUTTON_LAYER_ID, reconcileLayerOrderWithSchema } from '@/lib/tuning/layer-order';
 import type {
   ExportRequest,
   ExportResponse,
@@ -172,6 +173,15 @@ export class ExportManager {
       if (styleOverrides.customClasses) {
         tunedSchema.styling.customClasses = styleOverrides.customClasses;
       }
+      if ('submitButtonVariant' in styleOverrides) {
+        tunedSchema.styling.submitButtonVariant = styleOverrides.submitButtonVariant;
+      }
+      if ('submitButtonSize' in styleOverrides) {
+        tunedSchema.styling.submitButtonSize = styleOverrides.submitButtonSize;
+      }
+      if ('submitButtonFullWidth' in styleOverrides) {
+        tunedSchema.styling.submitButtonFullWidth = styleOverrides.submitButtonFullWidth;
+      }
     }
 
     // Apply structure changes
@@ -207,12 +217,26 @@ export class ExportManager {
         }
       }
 
+      if (structureChanges.layerOrder !== undefined) {
+        if (structureChanges.layerOrder.length > 0) {
+          const mergedLayer = reconcileLayerOrderWithSchema(working, structureChanges.layerOrder);
+          if (mergedLayer) {
+            const fieldOnly = mergedLayer.filter((id) => id !== SUBMIT_BUTTON_LAYER_ID);
+            working = structureEditor.reorderFields(working, fieldOnly);
+            working = { ...working, layerOrder: mergedLayer };
+          }
+        } else {
+          working = { ...working, layerOrder: undefined };
+        }
+      }
+
       if (structureChanges.layoutChanged) {
         working = structureEditor.changeLayout(working, structureChanges.layoutChanged);
       }
 
       tunedSchema.fields = working.fields;
       tunedSchema.layout = working.layout;
+      tunedSchema.layerOrder = working.layerOrder;
     }
 
     return applyBehaviorToSchema(tunedSchema, tuningState.behaviorSettings);

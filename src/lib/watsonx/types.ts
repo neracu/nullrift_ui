@@ -62,6 +62,13 @@ export interface StylingConfig {
   fontFamily?: string;
   fontSize?: 'sm' | 'base' | 'lg';
   customClasses?: string[];
+
+  /** Primary submit control visual style (preview + export). */
+  submitButtonVariant?: 'solid' | 'outline' | 'ghost' | 'secondary';
+  /** Submit control size preset. */
+  submitButtonSize?: 'sm' | 'default' | 'lg';
+  /** When false, submit uses intrinsic width instead of full row. */
+  submitButtonFullWidth?: boolean;
 }
 
 export interface ValidationConfig {
@@ -92,10 +99,25 @@ export interface ComponentSchema {
   fields: FieldDefinition[];
   styling: StylingConfig;
   layout: 'single-column' | 'two-column' | 'grid' | 'custom';
+  /**
+   * Optional visual order of layers: every field id once, plus `__submit__` for the submit control.
+   * Omitted means fields follow `fields` array order with submit last.
+   */
+  layerOrder?: string[];
   validation?: ValidationConfig;
   state?: StateDefinition[];
+  /** Primary form submit button label (preview, tuning, export). */
+  submitButtonLabel?: string;
   createdAt: string;
 }
+
+/** Default when `submitButtonLabel` is omitted or blank. */
+export const DEFAULT_SUBMIT_BUTTON_LABEL = 'Submit' as const;
+
+/** Title, description, and primary submit copy (preview design + tuning). */
+export type ComponentSchemaMetaPatch = Partial<
+  Pick<ComponentSchema, 'name' | 'description' | 'submitButtonLabel'>
+>;
 
 export interface GenerationResponse {
   schema: ComponentSchema;

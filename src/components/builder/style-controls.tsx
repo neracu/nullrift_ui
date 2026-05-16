@@ -25,6 +25,9 @@ import {
   FONT_SIZE_OPTIONS,
   SPACING_OPTIONS,
   STYLE_PANEL_RESET_VALUES,
+  SUBMIT_BUTTON_SIZE_OPTIONS,
+  SUBMIT_BUTTON_VARIANT_OPTIONS,
+  SUBMIT_BUTTON_WIDTH_OPTIONS,
   THEME_OPTIONS,
   TUNING_COLOR_PRESETS,
 } from '@/types/tuning';
@@ -423,6 +426,112 @@ export function StyleControls({
                   <SelectItem
                     key={option.value}
                     value={option.value}
+                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </section>
+
+      <Separator className="bg-border" />
+
+      <section className={cn('space-y-3', slotClassNames?.section)}>
+        <SectionTitle>Submit button</SectionTitle>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="submit-variant" className="text-xs font-medium text-muted-foreground">
+              Style
+            </Label>
+            <Select
+              value={styleOverrides.submitButtonVariant || 'solid'}
+              onValueChange={(value) =>
+                onStyleChange({
+                  submitButtonVariant: value as NonNullable<
+                    StyleOverrides['submitButtonVariant']
+                  >,
+                })
+              }
+              disabled={disabled}
+            >
+              <SelectTrigger
+                id="submit-variant"
+                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+              >
+                <SelectValue placeholder="Variant" />
+              </SelectTrigger>
+              <SelectContent className="border-border bg-popover text-popover-foreground">
+                {SUBMIT_BUTTON_VARIANT_OPTIONS.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="submit-size" className="text-xs font-medium text-muted-foreground">
+              Size
+            </Label>
+            <Select
+              value={styleOverrides.submitButtonSize || 'default'}
+              onValueChange={(value) =>
+                onStyleChange({
+                  submitButtonSize: value as NonNullable<StyleOverrides['submitButtonSize']>,
+                })
+              }
+              disabled={disabled}
+            >
+              <SelectTrigger
+                id="submit-size"
+                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+              >
+                <SelectValue placeholder="Size" />
+              </SelectTrigger>
+              <SelectContent className="border-border bg-popover text-popover-foreground">
+                {SUBMIT_BUTTON_SIZE_OPTIONS.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="submit-width" className="text-xs font-medium text-muted-foreground">
+              Width
+            </Label>
+            <Select
+              value={String(styleOverrides.submitButtonFullWidth !== false)}
+              onValueChange={(value) =>
+                onStyleChange({ submitButtonFullWidth: value === 'true' })
+              }
+              disabled={disabled}
+            >
+              <SelectTrigger
+                id="submit-width"
+                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+              >
+                <SelectValue placeholder="Width" />
+              </SelectTrigger>
+              <SelectContent className="border-border bg-popover text-popover-foreground">
+                {SUBMIT_BUTTON_WIDTH_OPTIONS.map((option) => (
+                  <SelectItem
+                    key={String(option.value)}
+                    value={String(option.value)}
                     className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
                   >
                     {option.label}

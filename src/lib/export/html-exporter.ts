@@ -5,7 +5,13 @@
  * creating self-contained web components without framework dependencies.
  */
 
-import type { ComponentSchema, FieldDefinition } from '@/lib/watsonx/types';
+import {
+  type ComponentSchema,
+  type FieldDefinition,
+  DEFAULT_SUBMIT_BUTTON_LABEL,
+} from '@/lib/watsonx/types';
+import { resolveSubmitButtonPresentation } from '@/lib/tuning/submit-button-style';
+import { SUBMIT_BUTTON_LAYER_ID, getEffectiveLayerOrder } from '@/lib/tuning/layer-order';
 import type { 
   Exporter, 
   ExportFile, 
@@ -175,19 +181,40 @@ export class HTMLExporter implements Exporter {
 
     if (hasForm) {
       html += `${indent}  <form id="${this.toKebabCase(componentName)}-form" class="space-y-4">\n`;
-      
-      // Render fields
-      (schema.fields || []).forEach(field => {
-        html += this.generateFieldHTML(field, indentLevel + 2);
+
+      const submitText =
+        schema.submitButtonLabel?.trim() || DEFAULT_SUBMIT_BUTTON_LABEL;
+      const submitHtml = submitText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      const submitPres = resolveSubmitButtonPresentation(schema.styling);
+      const submitClassAttr = submitPres.className
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;');
+      const submitStyleAttr = Object.entries(submitPres.style)
+        .map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`)
+        .join('; ');
+
+      const submitButtonHtml =
+        `${indent}    <button\n` +
+        `${indent}      type="submit"\n` +
+        `${indent}      class="${submitClassAttr}"\n` +
+        (submitStyleAttr ? `${indent}      style="${submitStyleAttr}"\n` : '') +
+        `${indent}    >\n` +
+        `${indent}      ${submitHtml}\n` +
+        `${indent}    </button>\n`;
+
+      getEffectiveLayerOrder(schema).forEach((token) => {
+        if (token === SUBMIT_BUTTON_LAYER_ID) {
+          html += submitButtonHtml;
+          return;
+        }
+        const field = (schema.fields || []).find((f) => f.id === token);
+        if (field) html += this.generateFieldHTML(field, indentLevel + 2);
       });
 
-      // Submit button
-      html += `${indent}    <button\n`;
-      html += `${indent}      type="submit"\n`;
-      html += `${indent}      class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"\n`;
-      html += `${indent}    >\n`;
-      html += `${indent}      Submit\n`;
-      html += `${indent}    </button>\n`;
       html += `${indent}  </form>\n`;
     } else {
       html += `${indent}  <h2 class="text-2xl font-bold mb-4">${componentName}</h2>\n`;

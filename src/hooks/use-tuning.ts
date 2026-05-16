@@ -8,7 +8,11 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import type { ComponentSchema, FieldDefinition } from '@/lib/watsonx/types';
+import type {
+  ComponentSchema,
+  ComponentSchemaMetaPatch,
+  FieldDefinition,
+} from '@/lib/watsonx/types';
 import type {
   TuningState,
   StyleOverrides,
@@ -28,6 +32,12 @@ import { StyleTransformer } from '@/lib/tuning/style-transformer';
 import { StructureEditor } from '@/lib/tuning/structure-editor';
 import { mergeFieldPartial } from '@/lib/tuning/merge-field-partial';
 import { reconcileFieldOrderWithSchema, resolveFieldInsertIndex } from '@/lib/tuning/field-insert';
+import {
+  SUBMIT_BUTTON_LAYER_ID,
+  defaultLayerOrder,
+  layerOrderAfterCanvasFieldReorder,
+  reconcileLayerOrderWithSchema,
+} from '@/lib/tuning/layer-order';
 
 /**
  * useTuning Hook
@@ -61,6 +71,10 @@ export function useTuning(
         ...DEFAULT_TUNING_STATE.structureChanges,
         ...s.structureChanges,
         fieldsAdded: normalizeFieldAdditionEntries(s.structureChanges?.fieldsAdded),
+        schemaMetaModified: {
+          ...DEFAULT_TUNING_STATE.structureChanges.schemaMetaModified,
+          ...(s.structureChanges?.schemaMetaModified ?? {}),
+        },
       },
     };
   }, []);
@@ -107,6 +121,10 @@ export function useTuning(
                 fieldsAdded: normalizeFieldAdditionEntries(
                   parsed.structureChanges?.fieldsAdded ?? baseState.structureChanges.fieldsAdded
                 ),
+                schemaMetaModified: {
+                  ...baseState.structureChanges.schemaMetaModified,
+                  ...(parsed.structureChanges?.schemaMetaModified ?? {}),
+                },
               },
             });
           }
@@ -234,6 +252,27 @@ export function useTuning(
         }
       }
 
+      if (structureChanges.layerOrder !== undefined) {
+        if (structureChanges.layerOrder.length > 0) {
+          const mergedLayer = reconcileLayerOrderWithSchema(
+            updatedSchema,
+            structureChanges.layerOrder
+          );
+          if (mergedLayer) {
+            const fieldOnly = mergedLayer.filter((id) => id !== SUBMIT_BUTTON_LAYER_ID);
+            updatedSchema = structureEditor.reorderFields(updatedSchema, fieldOnly);
+            updatedSchema = { ...updatedSchema, layerOrder: mergedLayer };
+          }
+        } else {
+          updatedSchema = { ...updatedSchema, layerOrder: undefined };
+        }
+      }
+
+      const schemaMeta = structureChanges.schemaMetaModified;
+      if (schemaMeta && Object.keys(schemaMeta).length > 0) {
+        updatedSchema = { ...updatedSchema, ...schemaMeta };
+      }
+
       // Apply layout change
       if (structureChanges.layoutChanged) {
         updatedSchema = structureEditor.changeLayout(
@@ -311,12 +350,25 @@ export function useTuning(
         insertAfterFieldId: options?.insertAfterFieldId,
       };
 
+      const baseIds = currentSchema.fields.map((f) => f.id);
+      let nextLayer = state.structureChanges.layerOrder?.length
+        ? [...state.structureChanges.layerOrder]
+        : defaultLayerOrder(baseIds);
+      const idxSubmit = nextLayer.indexOf(SUBMIT_BUTTON_LAYER_ID);
+      let insertIndex = idxSubmit >= 0 ? idxSubmit : nextLayer.length;
+      const after = options?.insertAfterFieldId;
+      if (after && nextLayer.includes(after)) {
+        insertIndex = nextLayer.indexOf(after) + 1;
+      }
+      nextLayer = [...nextLayer.slice(0, insertIndex), field.id, ...nextLayer.slice(insertIndex)];
+
       addToHistory({
         type: 'structure',
         changes: {
           structureChanges: {
             ...state.structureChanges,
             fieldsAdded: [...state.structureChanges.fieldsAdded, entry],
+            layerOrder: nextLayer,
           },
         },
         description: `Added field: ${field.label}`,
@@ -327,13 +379,14 @@ export function useTuning(
         structureChanges: {
           ...state.structureChanges,
           fieldsAdded: [...state.structureChanges.fieldsAdded, entry],
+          layerOrder: nextLayer,
         },
       };
 
       setState(newState);
       applyChanges(newState);
     },
-    [state, addToHistory, applyChanges]
+    [state, currentSchema, addToHistory, applyChanges]
   );
 
   /**
@@ -341,12 +394,18 @@ export function useTuning(
    */
   const removeField = useCallback(
     (fieldId: string) => {
+      const removeSet = new Set([fieldId]);
+      const nextLayer = state.structureChanges.layerOrder?.length
+        ? state.structureChanges.layerOrder.filter((id) => !removeSet.has(id))
+        : undefined;
+
       addToHistory({
         type: 'structure',
         changes: {
           structureChanges: {
             ...state.structureChanges,
             fieldsRemoved: [...state.structureChanges.fieldsRemoved, fieldId],
+            ...(nextLayer ? { layerOrder: nextLayer } : {}),
           },
         },
         description: `Removed field: ${fieldId}`,
@@ -357,6 +416,7 @@ export function useTuning(
         structureChanges: {
           ...state.structureChanges,
           fieldsRemoved: [...state.structureChanges.fieldsRemoved, fieldId],
+          ...(nextLayer ? { layerOrder: nextLayer } : {}),
         },
       };
 
@@ -374,12 +434,18 @@ export function useTuning(
       const unique = [...new Set(fieldIds)].filter(Boolean);
       if (unique.length === 0) return;
 
+      const removeSet = new Set(unique);
+      const nextLayer = state.structureChanges.layerOrder?.length
+        ? state.structureChanges.layerOrder.filter((id) => !removeSet.has(id))
+        : undefined;
+
       addToHistory({
         type: 'structure',
         changes: {
           structureChanges: {
             ...state.structureChanges,
             fieldsRemoved: [...state.structureChanges.fieldsRemoved, ...unique],
+            ...(nextLayer ? { layerOrder: nextLayer } : {}),
           },
         },
         description:
@@ -393,6 +459,7 @@ export function useTuning(
         structureChanges: {
           ...state.structureChanges,
           fieldsRemoved: [...state.structureChanges.fieldsRemoved, ...unique],
+          ...(nextLayer ? { layerOrder: nextLayer } : {}),
         },
       };
 
@@ -449,19 +516,25 @@ export function useTuning(
   );
 
   /**
-   * Reorder fields
+   * Reorder fields (canvas design mode); keeps submit placement when possible.
    */
   const reorderFields = useCallback(
     (newOrder: string[]) => {
+      const nextLayer = layerOrderAfterCanvasFieldReorder(
+        state.structureChanges.layerOrder,
+        newOrder
+      );
+
       addToHistory({
         type: 'structure',
         changes: {
           structureChanges: {
             ...state.structureChanges,
             fieldsReordered: newOrder,
+            layerOrder: nextLayer,
           },
         },
-        description: 'Reordered fields',
+        description: 'Reordered layers',
       });
 
       const newState = {
@@ -469,6 +542,7 @@ export function useTuning(
         structureChanges: {
           ...state.structureChanges,
           fieldsReordered: newOrder,
+          layerOrder: nextLayer,
         },
       };
 
@@ -476,6 +550,42 @@ export function useTuning(
       applyChanges(newState);
     },
     [state, addToHistory, applyChanges]
+  );
+
+  /**
+   * Reorder structure layers (fields + submit) from the tuning panel list.
+   */
+  const reorderLayers = useCallback(
+    (newOrder: string[]) => {
+      const merged = reconcileLayerOrderWithSchema(currentSchema, newOrder);
+      if (!merged) return;
+      const fieldOnly = merged.filter((id) => id !== SUBMIT_BUTTON_LAYER_ID);
+
+      addToHistory({
+        type: 'structure',
+        changes: {
+          structureChanges: {
+            ...state.structureChanges,
+            layerOrder: merged,
+            fieldsReordered: fieldOnly,
+          },
+        },
+        description: 'Reordered form layers',
+      });
+
+      const newState = {
+        ...state,
+        structureChanges: {
+          ...state.structureChanges,
+          layerOrder: merged,
+          fieldsReordered: fieldOnly,
+        },
+      };
+
+      setState(newState);
+      applyChanges(newState);
+    },
+    [state, currentSchema, addToHistory, applyChanges]
   );
 
   /**
@@ -510,6 +620,41 @@ export function useTuning(
             ...state.structureChanges.fieldsModified,
             [fieldId]: merged,
           },
+        },
+      };
+
+      setState(newState);
+      applyChanges(newState);
+    },
+    [state, addToHistory, applyChanges]
+  );
+
+  /**
+   * Update schema title or description (preview heading + exports).
+   */
+  const modifySchemaMeta = useCallback(
+    (changes: ComponentSchemaMetaPatch) => {
+      const merged = {
+        ...state.structureChanges.schemaMetaModified,
+        ...changes,
+      };
+
+      addToHistory({
+        type: 'structure',
+        changes: {
+          structureChanges: {
+            ...state.structureChanges,
+            schemaMetaModified: merged,
+          },
+        },
+        description: 'Updated component copy (title, description, or submit label)',
+      });
+
+      const newState = {
+        ...state,
+        structureChanges: {
+          ...state.structureChanges,
+          schemaMetaModified: merged,
         },
       };
 
@@ -660,6 +805,10 @@ export function useTuning(
           fieldsAdded: normalizeFieldAdditionEntries(
             config.structureChanges?.fieldsAdded ?? state.structureChanges.fieldsAdded
           ),
+          schemaMetaModified: {
+            ...state.structureChanges.schemaMetaModified,
+            ...(config.structureChanges?.schemaMetaModified ?? {}),
+          },
         },
       };
 
@@ -685,7 +834,9 @@ export function useTuning(
     duplicateFields,
     isDirty,
     reorderFields,
+    reorderLayers,
     modifyField,
+    modifySchemaMeta,
     changeLayout,
     updateBehavior,
     undo,

@@ -18,10 +18,21 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import type { ComponentSchema, FieldDefinition } from '../watsonx/types';
+import {
+  type ComponentSchema,
+  type ComponentSchemaMetaPatch,
+  type FieldDefinition,
+  DEFAULT_SUBMIT_BUTTON_LABEL,
+} from '../watsonx/types';
 import type { RendererProps, PreviewTheme } from './types';
 import { cn, formatSchemaDisplayName } from '../utils';
 import { getContrastForegroundForHex } from '@/lib/tuning/color-contrast';
+import { resolveSubmitButtonPresentation } from '@/lib/tuning/submit-button-style';
+import {
+  SUBMIT_BUTTON_LAYER_ID,
+  getEffectiveLayerOrder,
+  mergeVisibleLayerReorder,
+} from '@/lib/tuning/layer-order';
 import { DesignFieldRow } from '@/components/builder/design-field-row';
 import { resolveValidationConfig } from '@/lib/tuning/behavior-schema';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,6 +43,79 @@ interface PreviewFieldCtx {
   showRequiredIndicators: boolean;
   onFieldBlur?: (fieldId: string) => void;
   autoFocusFirst: boolean;
+}
+
+type DesignFieldCopyPatch = Partial<
+  Pick<FieldDefinition, 'label' | 'placeholder' | 'options'>
+>;
+
+interface DesignCopyEditConfig {
+  enabled: boolean;
+  onFieldCopyCommit?: (fieldId: string, patch: DesignFieldCopyPatch) => void;
+}
+
+/**
+ * Inline text editor for design-mode preview copy; commits on blur to limit undo churn.
+ */
+function DesignEditableText({
+  value,
+  onCommit,
+  multiline = false,
+  className,
+  'aria-label': ariaLabel,
+}: {
+  value: string;
+  onCommit: (next: string) => void;
+  multiline?: boolean;
+  className?: string;
+  'aria-label'?: string;
+}): ReactElement {
+  const [draft, setDraft] = React.useState(value);
+  React.useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  const baseClass = cn(
+    'w-full min-w-0 rounded border border-dashed border-primary/40 bg-primary/5 px-1.5 py-1 outline-none transition-colors',
+    'focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary',
+    className
+  );
+
+  const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
+
+  if (multiline) {
+    return (
+      <textarea
+        aria-label={ariaLabel}
+        data-design-edit
+        rows={3}
+        className={cn(baseClass, 'min-h-[4.5rem] resize-y')}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          if (draft !== value) onCommit(draft);
+        }}
+        onPointerDown={(e) => stop(e)}
+        onClick={(e) => stop(e)}
+      />
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      aria-label={ariaLabel}
+      data-design-edit
+      className={baseClass}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        if (draft !== value) onCommit(draft);
+      }}
+      onPointerDown={(e) => stop(e)}
+      onClick={(e) => stop(e)}
+    />
+  );
 }
 
 /** Focus ring uses `--preview-primary` set on the preview form. */
@@ -178,11 +262,22 @@ export function DynamicRenderer({
   selectedFieldIds = [],
   onFieldCanvasSelect,
   onCanvasReorder,
+  onCanvasLayerReorder,
   onCycleFieldColSpan,
+  onDesignSchemaMetaChange,
+  onDesignFieldCopyChange,
 }: RendererProps): ReactElement {
   const selectedSet = useMemo(() => new Set(selectedFieldIds), [selectedFieldIds]);
 
   const vCfg = useMemo(() => resolveValidationConfig(schema), [schema]);
+
+  const designCopy: DesignCopyEditConfig = useMemo(
+    () => ({
+      enabled: canvasMode === 'design',
+      onFieldCopyCommit: onDesignFieldCopyChange,
+    }),
+    [canvasMode, onDesignFieldCopyChange]
+  );
 
   const firstInteractiveFieldId = useMemo(() => {
     if (canvasMode === 'design') return undefined;
@@ -210,10 +305,25 @@ export function DynamicRenderer({
 
   const spacing = schema.styling?.spacing ?? 'normal';
 
-  const visibleFields = schema.fields.filter(
-    (field) => !field.conditional || shouldShowField(field, formData)
+  const fullLayerOrder = useMemo(() => getEffectiveLayerOrder(schema), [schema]);
+
+  const visibleSet = useMemo(
+    () =>
+      new Set(
+        schema.fields
+          .filter((field) => !field.conditional || shouldShowField(field, formData))
+          .map((f) => f.id)
+      ),
+    [schema.fields, formData]
   );
-  const visibleIds = visibleFields.map((f) => f.id);
+
+  const visibleLayerOrdered = useMemo(
+    () =>
+      fullLayerOrder.filter(
+        (id) => id === SUBMIT_BUTTON_LAYER_ID || visibleSet.has(id)
+      ),
+    [fullLayerOrder, visibleSet]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -221,16 +331,37 @@ export function DynamicRenderer({
   );
 
   const onDragEnd = (event: DragEndEvent) => {
-    if (canvasMode !== 'design' || !onCanvasReorder) return;
+    if (canvasMode !== 'design') return;
+    if (!onCanvasLayerReorder && !onCanvasReorder) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+
+    if (onCanvasLayerReorder) {
+      const ol = visibleLayerOrdered;
+      const oldIndex = ol.indexOf(String(active.id));
+      const newIndex = ol.indexOf(String(over.id));
+      if (oldIndex < 0 || newIndex < 0) return;
+      const nextVisible = arrayMove(ol, oldIndex, newIndex);
+      const mergedLayer = mergeVisibleLayerReorder(
+        fullLayerOrder,
+        nextVisible,
+        schema.fields,
+        formData
+      );
+      onCanvasLayerReorder(mergedLayer);
+      return;
+    }
+
+    const visibleIds = visibleLayerOrdered.filter((id) => id !== SUBMIT_BUTTON_LAYER_ID);
     const oldIndex = visibleIds.indexOf(String(active.id));
     const newIndex = visibleIds.indexOf(String(over.id));
     if (oldIndex < 0 || newIndex < 0) return;
     const nextVisible = arrayMove(visibleIds, oldIndex, newIndex);
     const merged = mergeVisibleReorder(schema.fields, nextVisible, formData);
-    onCanvasReorder(merged);
+    onCanvasReorder?.(merged);
   };
+
+  const sortableDesignIds = onCanvasLayerReorder ? visibleLayerOrdered : visibleLayerOrdered.filter((id) => id !== SUBMIT_BUTTON_LAYER_ID);
 
   const showColTool = schema.layout === 'two-column' || schema.layout === 'grid';
   const textColorOverride = hasPreviewTextColorOverride(schema);
@@ -245,7 +376,8 @@ export function DynamicRenderer({
         onFieldChange,
         textColorOverride,
         fieldCtx,
-        false
+        false,
+        designCopy
       )}
     </div>
   );
@@ -258,9 +390,28 @@ export function DynamicRenderer({
 
     layoutElement = (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={visibleIds}>
+        <SortableContext items={sortableDesignIds}>
           <div className={cn(isStack ? 'flex flex-col gap-3' : gridClass)}>
-            {visibleFields.map((field) => {
+            {sortableDesignIds.map((token) => {
+              if (token === SUBMIT_BUTTON_LAYER_ID) {
+                return (
+                  <DesignFieldRow
+                    key={SUBMIT_BUTTON_LAYER_ID}
+                    id={SUBMIT_BUTTON_LAYER_ID}
+                    disabledSortable={!onCanvasLayerReorder}
+                    selected={selectedSet.has(SUBMIT_BUTTON_LAYER_ID)}
+                    showColTool={false}
+                    colSpanLabel=""
+                    colSpanClass=""
+                    onColCycle={() => {}}
+                    onSelect={() => {}}
+                  >
+                    {submitPreviewBlock(schema, theme, true, onDesignSchemaMetaChange)}
+                  </DesignFieldRow>
+                );
+              }
+              const field = schema.fields.find((f) => f.id === token);
+              if (!field) return null;
               const selected = selectedSet.has(field.id);
               const spanClass = fieldColSpanClass(schema.layout, field.layout?.colSpan);
               const colLabel =
@@ -289,15 +440,16 @@ export function DynamicRenderer({
       </DndContext>
     );
   } else {
-    const fieldElements = schema.fields.map((field) => {
+    const fieldMap = new Map<string, ReactElement | null>();
+    schema.fields.forEach((field) => {
       if (field.conditional && !shouldShowField(field, formData)) {
-        return null;
+        fieldMap.set(field.id, null);
+        return;
       }
       const autoFocusThis =
-        canvasMode !== 'design' &&
-        field.id === firstInteractiveFieldId &&
-        fieldCtx.autoFocusFirst;
-      return (
+        field.id === firstInteractiveFieldId && fieldCtx.autoFocusFirst;
+      fieldMap.set(
+        field.id,
         <div
           key={field.id}
           data-preview-field={field.id}
@@ -311,21 +463,54 @@ export function DynamicRenderer({
             onFieldChange,
             textColorOverride,
             fieldCtx,
-            autoFocusThis
+            autoFocusThis,
+            designCopy
           )}
         </div>
       );
     });
-    layoutElement = applyLayout(fieldElements, schema.layout, spacing);
+
+    const layerOrder = getEffectiveLayerOrder(schema);
+    const segments: ReactElement[] = [];
+    let bucket: ReactElement[] = [];
+    let segKey = 0;
+    const flushBucket = () => {
+      const cells = bucket.filter(Boolean) as ReactElement[];
+      bucket = [];
+      if (cells.length === 0) return;
+      segments.push(
+        <div key={`lay-${segKey++}`} className="space-y-6">
+          {applyLayout(cells, schema.layout, spacing)}
+        </div>
+      );
+    };
+
+    for (const token of layerOrder) {
+      if (token === SUBMIT_BUTTON_LAYER_ID) {
+        flushBucket();
+        segments.push(
+          <div key={`sub-${segKey++}`} className="space-y-6">
+            {submitPreviewBlock(schema, theme, false, undefined, true)}
+          </div>
+        );
+      } else {
+        const cell = fieldMap.get(token);
+        if (cell) bucket.push(cell);
+      }
+    }
+    flushBucket();
+
+    layoutElement = <div className="space-y-6">{segments}</div>;
   }
 
   return createFormWrapper(
-    layoutElement,
     schema,
     theme,
     handleSubmit,
     canvasMode === 'design',
-    vCfg.submitOnEnter
+    vCfg.submitOnEnter,
+    canvasMode === 'design' ? onDesignSchemaMetaChange : undefined,
+    layoutElement
   );
 }
 
@@ -363,7 +548,8 @@ function createFieldElement(
   onFieldChange: (fieldId: string, value: any) => void,
   textColorOverride: boolean,
   ctx: PreviewFieldCtx,
-  autoFocus: boolean
+  autoFocus: boolean,
+  designCopy: DesignCopyEditConfig
 ): ReactElement {
   const value = formData[field.id] ?? '';
   const error = errors[field.id];
@@ -380,7 +566,8 @@ function createFieldElement(
         onFieldChange,
         textColorOverride,
         ctx,
-        autoFocus
+        autoFocus,
+        designCopy
       );
 
     case 'textarea':
@@ -393,7 +580,8 @@ function createFieldElement(
         onFieldChange,
         textColorOverride,
         ctx,
-        autoFocus
+        autoFocus,
+        designCopy
       );
 
     case 'select':
@@ -406,7 +594,8 @@ function createFieldElement(
         onFieldChange,
         textColorOverride,
         ctx,
-        autoFocus
+        autoFocus,
+        designCopy
       );
 
     case 'checkbox':
@@ -418,7 +607,8 @@ function createFieldElement(
         isRequired,
         onFieldChange,
         textColorOverride,
-        ctx
+        ctx,
+        designCopy
       );
 
     case 'radio':
@@ -430,7 +620,8 @@ function createFieldElement(
         isRequired,
         onFieldChange,
         textColorOverride,
-        ctx
+        ctx,
+        designCopy
       );
 
     case 'date':
@@ -443,7 +634,8 @@ function createFieldElement(
         onFieldChange,
         textColorOverride,
         ctx,
-        autoFocus
+        autoFocus,
+        designCopy
       );
 
     case 'file':
@@ -456,7 +648,8 @@ function createFieldElement(
         onFieldChange,
         textColorOverride,
         ctx,
-        autoFocus
+        autoFocus,
+        designCopy
       );
 
     default:
@@ -469,9 +662,160 @@ function createFieldElement(
         onFieldChange,
         textColorOverride,
         ctx,
-        autoFocus
+        autoFocus,
+        designCopy
       );
   }
+}
+
+/**
+ * Field label row: editable in design mode when a commit handler exists.
+ */
+function renderFieldLabelHeader(
+  field: FieldDefinition,
+  theme: PreviewTheme,
+  textColorOverride: boolean,
+  showReq: boolean,
+  designCopy: DesignCopyEditConfig,
+  error: string | undefined,
+  layout: 'inline' | 'block'
+): ReactElement {
+  const req = showReq ? <span className="ml-0.5 text-red-500">*</span> : null;
+  const canEdit = designCopy.enabled && Boolean(designCopy.onFieldCopyCommit);
+  const editClass = previewStaticTextClass(theme, textColorOverride, 'text-sm font-medium');
+  const staticInline = previewStaticTextClass(
+    theme,
+    textColorOverride,
+    'cursor-default text-sm font-medium'
+  );
+  const staticBlock = previewStaticTextClass(
+    theme,
+    textColorOverride,
+    'mb-1 block cursor-default text-sm font-medium'
+  );
+
+  const editableInner = (
+    <DesignEditableText
+      aria-label={`Label for field ${field.id}`}
+      value={field.label}
+      onCommit={(v) => designCopy.onFieldCopyCommit!(field.id, { label: v })}
+      className={editClass}
+    />
+  );
+
+  const editableBlock =
+    layout === 'inline' ? (
+      <div className="min-w-0 flex-1 space-y-0.5">
+        {editableInner}
+        <span className="inline-flex items-center">{req}</span>
+      </div>
+    ) : (
+      <div className="mb-1 space-y-0.5">
+        {editableInner}
+        <span className="inline-flex items-center">{req}</span>
+      </div>
+    );
+
+  if (layout === 'inline') {
+    return (
+      <div className="mb-1 flex items-center justify-between gap-2">
+        {canEdit ? (
+          editableBlock
+        ) : (
+          <label htmlFor={field.id} className={staticInline}>
+            {field.label}
+            {req}
+          </label>
+        )}
+        {error ? (
+          <span
+            id={`${field.id}-error`}
+            className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+            role="alert"
+          >
+            {error}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (canEdit) {
+    return editableBlock;
+  }
+
+  return (
+    <label htmlFor={field.id} className={staticBlock}>
+      {field.label}
+      {req}
+    </label>
+  );
+}
+
+/**
+ * Design-mode placeholder editor under the control.
+ */
+function renderDesignPlaceholderEditor(
+  field: FieldDefinition,
+  designCopy: DesignCopyEditConfig
+): ReactElement | null {
+  if (!designCopy.enabled || !designCopy.onFieldCopyCommit) return null;
+  return (
+    <div className="mt-1.5 space-y-0.5">
+      <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        Placeholder
+      </span>
+      <DesignEditableText
+        aria-label={`Placeholder for field ${field.id}`}
+        value={field.placeholder ?? ''}
+        onCommit={(v) => {
+          const t = v.trim();
+          designCopy.onFieldCopyCommit!(field.id, {
+            placeholder: t === '' ? undefined : v,
+          });
+        }}
+        className="text-xs"
+      />
+    </div>
+  );
+}
+
+/**
+ * Design-mode select option label editors.
+ */
+function renderDesignSelectOptionLabels(
+  field: FieldDefinition,
+  designCopy: DesignCopyEditConfig
+): ReactElement | null {
+  if (!designCopy.enabled || !designCopy.onFieldCopyCommit) return null;
+  if (!field.options?.length) return null;
+  return (
+    <div className="mt-2 space-y-1.5 rounded-md border border-dashed border-primary/30 bg-primary/5 p-2">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        Option labels
+      </p>
+      <div className="space-y-1.5">
+        {field.options.map((opt) => (
+          <div key={opt.value} className="flex items-center gap-2 text-xs">
+            <code className="shrink-0 rounded bg-slate-800/40 px-1 py-0.5 text-[10px] text-slate-400">
+              {opt.value}
+            </code>
+            <DesignEditableText
+              aria-label={`Label for option ${opt.value}`}
+              value={opt.label}
+              onCommit={(next) => {
+                const nextOpts = field.options!.map((o) =>
+                  o.value === opt.value ? { ...o, label: next } : o
+                );
+                designCopy.onFieldCopyCommit!(field.id, { options: nextOpts });
+              }}
+              className="text-xs"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -486,9 +830,11 @@ function createInputField(
   onFieldChange: (fieldId: string, value: any) => void,
   textColorOverride: boolean,
   ctx: PreviewFieldCtx,
-  autoFocus: boolean
+  autoFocus: boolean,
+  designCopy: DesignCopyEditConfig
 ): ReactElement {
   const showReq = isRequired && ctx.showRequiredIndicators;
+  const copyEditable = designCopy.enabled && Boolean(designCopy.onFieldCopyCommit);
   const inputClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors duration-200',
     PREVIEW_FOCUS_RING,
@@ -510,6 +856,7 @@ function createInputField(
       onChange={(e) => onFieldChange(field.id, e.target.value)}
       onBlur={() => ctx.onFieldBlur?.(field.id)}
       aria-invalid={!!error}
+      aria-label={copyEditable ? field.label : undefined}
       aria-describedby={
         error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
       }
@@ -520,43 +867,27 @@ function createInputField(
 
   return (
     <>
-      {ctx.errorPosition === 'inline' ? (
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <label
-            htmlFor={field.id}
-            className={previewStaticTextClass(
-              theme,
-              textColorOverride,
-              'cursor-default text-sm font-medium'
-            )}
-          >
-            {field.label}
-            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-          </label>
-          {error ? (
-            <span
-              id={`${field.id}-error`}
-              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
-              role="alert"
-            >
-              {error}
-            </span>
-          ) : null}
-        </div>
-      ) : (
-        <label
-          htmlFor={field.id}
-          className={previewStaticTextClass(
+      {ctx.errorPosition === 'inline'
+        ? renderFieldLabelHeader(
+            field,
             theme,
             textColorOverride,
-            'mb-1 block cursor-default text-sm font-medium'
+            showReq,
+            designCopy,
+            error,
+            'inline'
+          )
+        : renderFieldLabelHeader(
+            field,
+            theme,
+            textColorOverride,
+            showReq,
+            designCopy,
+            error,
+            'block'
           )}
-        >
-          {field.label}
-          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-        </label>
-      )}
       {wrapped}
+      {renderDesignPlaceholderEditor(field, designCopy)}
       {ctx.errorPosition === 'below' && error ? (
         <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
@@ -578,9 +909,11 @@ function createTextareaField(
   onFieldChange: (fieldId: string, value: any) => void,
   textColorOverride: boolean,
   ctx: PreviewFieldCtx,
-  autoFocus: boolean
+  autoFocus: boolean,
+  designCopy: DesignCopyEditConfig
 ): ReactElement {
   const showReq = isRequired && ctx.showRequiredIndicators;
+  const copyEditable = designCopy.enabled && Boolean(designCopy.onFieldCopyCommit);
   const textareaClasses = cn(
     'w-full resize-y rounded-md border px-3 py-2 transition-colors duration-200',
     PREVIEW_FOCUS_RING,
@@ -602,6 +935,7 @@ function createTextareaField(
       onChange={(e) => onFieldChange(field.id, e.target.value)}
       onBlur={() => ctx.onFieldBlur?.(field.id)}
       aria-invalid={!!error}
+      aria-label={copyEditable ? field.label : undefined}
       aria-describedby={
         error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
       }
@@ -612,43 +946,27 @@ function createTextareaField(
 
   return (
     <>
-      {ctx.errorPosition === 'inline' ? (
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <label
-            htmlFor={field.id}
-            className={previewStaticTextClass(
-              theme,
-              textColorOverride,
-              'cursor-default text-sm font-medium'
-            )}
-          >
-            {field.label}
-            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-          </label>
-          {error ? (
-            <span
-              id={`${field.id}-error`}
-              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
-              role="alert"
-            >
-              {error}
-            </span>
-          ) : null}
-        </div>
-      ) : (
-        <label
-          htmlFor={field.id}
-          className={previewStaticTextClass(
+      {ctx.errorPosition === 'inline'
+        ? renderFieldLabelHeader(
+            field,
             theme,
             textColorOverride,
-            'mb-1 block cursor-default text-sm font-medium'
+            showReq,
+            designCopy,
+            error,
+            'inline'
+          )
+        : renderFieldLabelHeader(
+            field,
+            theme,
+            textColorOverride,
+            showReq,
+            designCopy,
+            error,
+            'block'
           )}
-        >
-          {field.label}
-          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-        </label>
-      )}
       {wrapped}
+      {renderDesignPlaceholderEditor(field, designCopy)}
       {ctx.errorPosition === 'below' && error ? (
         <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
@@ -670,9 +988,11 @@ function createSelectField(
   onFieldChange: (fieldId: string, value: any) => void,
   textColorOverride: boolean,
   ctx: PreviewFieldCtx,
-  autoFocus: boolean
+  autoFocus: boolean,
+  designCopy: DesignCopyEditConfig
 ): ReactElement {
   const showReq = isRequired && ctx.showRequiredIndicators;
+  const copyEditable = designCopy.enabled && Boolean(designCopy.onFieldCopyCommit);
   const selectClasses = cn(
     'w-full cursor-pointer rounded-md border px-3 py-2 transition-colors duration-200',
     PREVIEW_FOCUS_RING,
@@ -692,6 +1012,7 @@ function createSelectField(
       onChange={(e) => onFieldChange(field.id, e.target.value)}
       onBlur={() => ctx.onFieldBlur?.(field.id)}
       aria-invalid={!!error}
+      aria-label={copyEditable ? field.label : undefined}
       aria-describedby={
         error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
       }
@@ -713,43 +1034,28 @@ function createSelectField(
 
   return (
     <>
-      {ctx.errorPosition === 'inline' ? (
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <label
-            htmlFor={field.id}
-            className={previewStaticTextClass(
-              theme,
-              textColorOverride,
-              'cursor-default text-sm font-medium'
-            )}
-          >
-            {field.label}
-            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-          </label>
-          {error ? (
-            <span
-              id={`${field.id}-error`}
-              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
-              role="alert"
-            >
-              {error}
-            </span>
-          ) : null}
-        </div>
-      ) : (
-        <label
-          htmlFor={field.id}
-          className={previewStaticTextClass(
+      {ctx.errorPosition === 'inline'
+        ? renderFieldLabelHeader(
+            field,
             theme,
             textColorOverride,
-            'mb-1 block cursor-default text-sm font-medium'
+            showReq,
+            designCopy,
+            error,
+            'inline'
+          )
+        : renderFieldLabelHeader(
+            field,
+            theme,
+            textColorOverride,
+            showReq,
+            designCopy,
+            error,
+            'block'
           )}
-        >
-          {field.label}
-          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-        </label>
-      )}
       {wrapped}
+      {renderDesignPlaceholderEditor(field, designCopy)}
+      {renderDesignSelectOptionLabels(field, designCopy)}
       {ctx.errorPosition === 'below' && error ? (
         <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
@@ -770,12 +1076,45 @@ function createCheckboxField(
   isRequired: boolean,
   onFieldChange: (fieldId: string, value: any) => void,
   textColorOverride: boolean,
-  ctx: PreviewFieldCtx
+  ctx: PreviewFieldCtx,
+  designCopy: DesignCopyEditConfig
 ): ReactElement {
   const checked = Boolean(value);
   const showReq = isRequired && ctx.showRequiredIndicators;
+  const copyEditable = designCopy.enabled && Boolean(designCopy.onFieldCopyCommit);
 
-  const row = (
+  const row = copyEditable ? (
+    <div className="flex items-start gap-2">
+      <input
+        id={field.id}
+        type="checkbox"
+        checked={checked}
+        className={cn(
+          'mt-0.5 h-4 w-4 shrink-0 rounded border transition-colors duration-200 accent-[color:var(--preview-secondary)]',
+          PREVIEW_FOCUS_RING,
+          theme === 'dark' ? 'border-slate-700 bg-slate-900' : 'border-slate-300 bg-white',
+          error && 'border-red-500'
+        )}
+        required={isRequired}
+        onChange={(e) => onFieldChange(field.id, e.target.checked)}
+        onBlur={() => ctx.onFieldBlur?.(field.id)}
+        aria-invalid={!!error}
+        aria-label={field.label}
+        aria-describedby={
+          error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
+        }
+      />
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <DesignEditableText
+          aria-label={`Label for field ${field.id}`}
+          value={field.label}
+          onCommit={(v) => designCopy.onFieldCopyCommit!(field.id, { label: v })}
+          className={previewStaticTextClass(theme, textColorOverride, 'text-sm font-medium')}
+        />
+        {showReq ? <span className="text-xs text-red-500">*</span> : null}
+      </div>
+    </div>
+  ) : (
     <div className="flex items-center gap-2">
       <input
         id={field.id}
@@ -846,9 +1185,13 @@ function createRadioField(
   isRequired: boolean,
   onFieldChange: (fieldId: string, value: any) => void,
   textColorOverride: boolean,
-  ctx: PreviewFieldCtx
+  ctx: PreviewFieldCtx,
+  designCopy: DesignCopyEditConfig
 ): ReactElement {
   const showReq = isRequired && ctx.showRequiredIndicators;
+  const copyEditable = designCopy.enabled && Boolean(designCopy.onFieldCopyCommit);
+  const req = showReq ? <span className="ml-0.5 text-red-500">*</span> : null;
+  const editLegendClass = previewStaticTextClass(theme, textColorOverride, 'text-sm font-medium');
 
   const optionsBlock = (
     <div className="space-y-2">
@@ -861,20 +1204,35 @@ function createRadioField(
             value={option.value}
             checked={value === option.value}
             className={cn(
-              'h-4 w-4 border transition-colors duration-200 accent-[color:var(--preview-secondary)]',
+              'h-4 w-4 shrink-0 border transition-colors duration-200 accent-[color:var(--preview-secondary)]',
               PREVIEW_FOCUS_RING,
               theme === 'dark' ? 'border-slate-700 bg-slate-900' : 'border-slate-300 bg-white'
             )}
             onChange={(e) => onFieldChange(field.id, e.target.value)}
             onBlur={() => ctx.onFieldBlur?.(field.id)}
             aria-invalid={!!error}
+            aria-label={copyEditable ? option.label : undefined}
           />
-          <label
-            htmlFor={`${field.id}-${option.value}`}
-            className={previewStaticTextClass(theme, textColorOverride, 'cursor-pointer text-sm')}
-          >
-            {option.label}
-          </label>
+          {copyEditable ? (
+            <DesignEditableText
+              aria-label={`Label for option ${option.value}`}
+              value={option.label}
+              onCommit={(next) => {
+                const nextOpts = field.options!.map((o) =>
+                  o.value === option.value ? { ...o, label: next } : o
+                );
+                designCopy.onFieldCopyCommit!(field.id, { options: nextOpts });
+              }}
+              className={previewStaticTextClass(theme, textColorOverride, 'text-sm')}
+            />
+          ) : (
+            <label
+              htmlFor={`${field.id}-${option.value}`}
+              className={previewStaticTextClass(theme, textColorOverride, 'cursor-pointer text-sm')}
+            >
+              {option.label}
+            </label>
+          )}
         </div>
       ))}
     </div>
@@ -883,42 +1241,91 @@ function createRadioField(
   const wrappedOptions =
     ctx.errorPosition === 'tooltip' ? wrapTooltipControl(error, 'tooltip', optionsBlock) : optionsBlock;
 
+  const legendInline = copyEditable ? (
+    <legend
+      className={previewStaticTextClass(
+        theme,
+        textColorOverride,
+        'mb-2 flex w-full items-center justify-between gap-2 text-sm font-medium'
+      )}
+    >
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <DesignEditableText
+          aria-label={`Group label for ${field.id}`}
+          value={field.label}
+          onCommit={(v) => designCopy.onFieldCopyCommit!(field.id, { label: v })}
+          className={editLegendClass}
+        />
+        <span className="inline-flex items-center">{req}</span>
+      </div>
+      {error ? (
+        <span
+          id={`${field.id}-error`}
+          className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+          role="alert"
+        >
+          {error}
+        </span>
+      ) : null}
+    </legend>
+  ) : (
+    <legend
+      className={previewStaticTextClass(
+        theme,
+        textColorOverride,
+        'mb-2 flex w-full items-center justify-between gap-2 text-sm font-medium'
+      )}
+    >
+      <span>
+        {field.label}
+        {req}
+      </span>
+      {error ? (
+        <span
+          id={`${field.id}-error`}
+          className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+          role="alert"
+        >
+          {error}
+        </span>
+      ) : null}
+    </legend>
+  );
+
+  const legendBlock = copyEditable ? (
+    <legend
+      className={previewStaticTextClass(
+        theme,
+        textColorOverride,
+        'mb-2 block text-sm font-medium'
+      )}
+    >
+      <div className="space-y-0.5">
+        <DesignEditableText
+          aria-label={`Group label for ${field.id}`}
+          value={field.label}
+          onCommit={(v) => designCopy.onFieldCopyCommit!(field.id, { label: v })}
+          className={editLegendClass}
+        />
+        <span className="inline-flex items-center">{req}</span>
+      </div>
+    </legend>
+  ) : (
+    <legend
+      className={previewStaticTextClass(
+        theme,
+        textColorOverride,
+        'mb-2 block text-sm font-medium'
+      )}
+    >
+      {field.label}
+      {req}
+    </legend>
+  );
+
   return (
     <fieldset>
-      {ctx.errorPosition === 'inline' ? (
-        <legend
-          className={previewStaticTextClass(
-            theme,
-            textColorOverride,
-            'mb-2 flex w-full items-center justify-between gap-2 text-sm font-medium'
-          )}
-        >
-          <span>
-            {field.label}
-            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-          </span>
-          {error ? (
-            <span
-              id={`${field.id}-error`}
-              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
-              role="alert"
-            >
-              {error}
-            </span>
-          ) : null}
-        </legend>
-      ) : (
-        <legend
-          className={previewStaticTextClass(
-            theme,
-            textColorOverride,
-            'mb-2 block text-sm font-medium'
-          )}
-        >
-          {field.label}
-          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-        </legend>
-      )}
+      {ctx.errorPosition === 'inline' ? legendInline : legendBlock}
       {wrappedOptions}
       {ctx.errorPosition === 'below' && error ? (
         <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
@@ -941,9 +1348,11 @@ function createDateField(
   onFieldChange: (fieldId: string, value: any) => void,
   textColorOverride: boolean,
   ctx: PreviewFieldCtx,
-  autoFocus: boolean
+  autoFocus: boolean,
+  designCopy: DesignCopyEditConfig
 ): ReactElement {
   const showReq = isRequired && ctx.showRequiredIndicators;
+  const copyEditable = designCopy.enabled && Boolean(designCopy.onFieldCopyCommit);
   const inputClasses = cn(
     'w-full rounded-md border px-3 py-2 transition-colors duration-200',
     PREVIEW_FOCUS_RING,
@@ -964,6 +1373,7 @@ function createDateField(
       onChange={(e) => onFieldChange(field.id, e.target.value)}
       onBlur={() => ctx.onFieldBlur?.(field.id)}
       aria-invalid={!!error}
+      aria-label={copyEditable ? field.label : undefined}
       aria-describedby={
         error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
       }
@@ -974,43 +1384,27 @@ function createDateField(
 
   return (
     <>
-      {ctx.errorPosition === 'inline' ? (
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <label
-            htmlFor={field.id}
-            className={previewStaticTextClass(
-              theme,
-              textColorOverride,
-              'cursor-default text-sm font-medium'
-            )}
-          >
-            {field.label}
-            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-          </label>
-          {error ? (
-            <span
-              id={`${field.id}-error`}
-              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
-              role="alert"
-            >
-              {error}
-            </span>
-          ) : null}
-        </div>
-      ) : (
-        <label
-          htmlFor={field.id}
-          className={previewStaticTextClass(
+      {ctx.errorPosition === 'inline'
+        ? renderFieldLabelHeader(
+            field,
             theme,
             textColorOverride,
-            'mb-1 block cursor-default text-sm font-medium'
+            showReq,
+            designCopy,
+            error,
+            'inline'
+          )
+        : renderFieldLabelHeader(
+            field,
+            theme,
+            textColorOverride,
+            showReq,
+            designCopy,
+            error,
+            'block'
           )}
-        >
-          {field.label}
-          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-        </label>
-      )}
       {wrapped}
+      {renderDesignPlaceholderEditor(field, designCopy)}
       {ctx.errorPosition === 'below' && error ? (
         <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
@@ -1032,9 +1426,11 @@ function createFileField(
   onFieldChange: (fieldId: string, value: any) => void,
   textColorOverride: boolean,
   ctx: PreviewFieldCtx,
-  autoFocus: boolean
+  autoFocus: boolean,
+  designCopy: DesignCopyEditConfig
 ): ReactElement {
   const showReq = isRequired && ctx.showRequiredIndicators;
+  const copyEditable = designCopy.enabled && Boolean(designCopy.onFieldCopyCommit);
   const inputClasses = cn(
     'w-full rounded-md border px-3 py-2 transition-colors duration-200',
     PREVIEW_FOCUS_RING,
@@ -1059,6 +1455,7 @@ function createFileField(
       }}
       onBlur={() => ctx.onFieldBlur?.(field.id)}
       aria-invalid={!!error}
+      aria-label={copyEditable ? field.label : undefined}
       aria-describedby={
         error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
       }
@@ -1069,43 +1466,27 @@ function createFileField(
 
   return (
     <>
-      {ctx.errorPosition === 'inline' ? (
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <label
-            htmlFor={field.id}
-            className={previewStaticTextClass(
-              theme,
-              textColorOverride,
-              'cursor-default text-sm font-medium'
-            )}
-          >
-            {field.label}
-            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-          </label>
-          {error ? (
-            <span
-              id={`${field.id}-error`}
-              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
-              role="alert"
-            >
-              {error}
-            </span>
-          ) : null}
-        </div>
-      ) : (
-        <label
-          htmlFor={field.id}
-          className={previewStaticTextClass(
+      {ctx.errorPosition === 'inline'
+        ? renderFieldLabelHeader(
+            field,
             theme,
             textColorOverride,
-            'mb-1 block cursor-default text-sm font-medium'
+            showReq,
+            designCopy,
+            error,
+            'inline'
+          )
+        : renderFieldLabelHeader(
+            field,
+            theme,
+            textColorOverride,
+            showReq,
+            designCopy,
+            error,
+            'block'
           )}
-        >
-          {field.label}
-          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
-        </label>
-      )}
       {wrapped}
+      {renderDesignPlaceholderEditor(field, designCopy)}
       {ctx.errorPosition === 'below' && error ? (
         <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
@@ -1154,15 +1535,93 @@ function applyLayout(
 }
 
 /**
+ * Submit control for preview: design (label edit + disabled) or interact (type=submit).
+ */
+function submitPreviewBlock(
+  schema: ComponentSchema,
+  theme: PreviewTheme,
+  designMode: boolean,
+  onDesignSchemaMetaChange: ((patch: ComponentSchemaMetaPatch) => void) | undefined,
+  embedded = false
+): ReactElement {
+  const styling = schema.styling;
+  const submitBtn = resolveSubmitButtonPresentation(styling);
+  const submitFocusRingClass =
+    submitBtn.style.color === '#000000'
+      ? 'focus-visible:ring-slate-500'
+      : 'focus-visible:ring-white/70';
+  const resolvedSubmitLabel = schema.submitButtonLabel?.trim() || DEFAULT_SUBMIT_BUTTON_LABEL;
+  const submitWrapClass =
+    styling.submitButtonFullWidth === false ? 'flex justify-start' : undefined;
+
+  if (designMode && onDesignSchemaMetaChange) {
+    return (
+      <div className={cn(!embedded && 'mt-6', 'space-y-2')}>
+        <div className="space-y-1">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Submit button
+          </span>
+          <DesignEditableText
+            aria-label="Submit button label"
+            value={schema.submitButtonLabel ?? DEFAULT_SUBMIT_BUTTON_LABEL}
+            onCommit={(v) => {
+              const t = v.trim();
+              onDesignSchemaMetaChange({
+                submitButtonLabel: t === '' ? undefined : t,
+              });
+            }}
+            className="text-sm font-medium"
+          />
+        </div>
+        <div className={submitWrapClass}>
+          <button
+            type="button"
+            disabled
+            style={submitBtn.style}
+            className={cn(
+              submitBtn.className,
+              'cursor-default opacity-75',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+              submitFocusRingClass,
+              theme === 'dark' ? 'focus-visible:ring-offset-slate-900' : 'focus-visible:ring-offset-white'
+            )}
+          >
+            {resolvedSubmitLabel}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(!embedded && 'mt-6', submitWrapClass)}>
+      <button
+        type="submit"
+        style={submitBtn.style}
+        className={cn(
+          submitBtn.className,
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+          submitFocusRingClass,
+          theme === 'dark' ? 'focus-visible:ring-offset-slate-900' : 'focus-visible:ring-offset-white'
+        )}
+      >
+        {resolvedSubmitLabel}
+      </button>
+    </div>
+  );
+}
+
+/**
  * Create form wrapper with styling
  */
 function createFormWrapper(
-  content: ReactElement,
   schema: ComponentSchema,
   theme: PreviewTheme,
   onSubmit: (e: FormEvent<HTMLFormElement>) => void,
-  designMode = false,
-  submitOnEnter = true
+  designMode: boolean,
+  submitOnEnter: boolean,
+  onDesignSchemaMetaChange: ((patch: ComponentSchemaMetaPatch) => void) | undefined,
+  formBody: ReactElement
 ): ReactElement {
   const { styling } = schema;
   const spacing = styling.spacing || 'normal';
@@ -1194,8 +1653,6 @@ function createFormWrapper(
       (theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200')
   );
 
-  const submitLabelColor = getContrastForegroundForHex(ps.primaryColor);
-
   return (
     <TooltipProvider delayDuration={0}>
       <form
@@ -1214,54 +1671,68 @@ function createFormWrapper(
         aria-label={designMode ? 'Component layout (design mode)' : undefined}
       >
         {/* Form Title */}
-        {schema.name && (
-          <h2
-            className={cn(
-              'text-2xl font-semibold mb-6',
-              !textOverride && (theme === 'dark' ? 'text-slate-100' : 'text-slate-900')
-            )}
-          >
-            {formatSchemaDisplayName(schema.name)}
-          </h2>
+        {designMode && onDesignSchemaMetaChange ? (
+          <div className="mb-6 space-y-1">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Title
+            </span>
+            <DesignEditableText
+              aria-label="Component name"
+              value={schema.name ?? ''}
+              onCommit={(v) => onDesignSchemaMetaChange({ name: v })}
+              className={cn(
+                'text-2xl font-semibold',
+                !textOverride && (theme === 'dark' ? 'text-slate-100' : 'text-slate-900')
+              )}
+            />
+          </div>
+        ) : (
+          schema.name && (
+            <h2
+              className={cn(
+                'text-2xl font-semibold mb-6',
+                !textOverride && (theme === 'dark' ? 'text-slate-100' : 'text-slate-900')
+              )}
+            >
+              {formatSchemaDisplayName(schema.name)}
+            </h2>
+          )
         )}
 
         {/* Form Description */}
-        {schema.description && (
-          <p
-            className={cn(
-              'text-sm mb-6',
-              !textOverride && (theme === 'dark' ? 'text-slate-400' : 'text-slate-600'),
-              textOverride && 'opacity-90'
-            )}
-          >
-            {schema.description}
-          </p>
+        {designMode && onDesignSchemaMetaChange ? (
+          <div className="mb-6 space-y-1">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Description
+            </span>
+            <DesignEditableText
+              multiline
+              aria-label="Component description"
+              value={schema.description ?? ''}
+              onCommit={(v) => onDesignSchemaMetaChange({ description: v })}
+              className={cn(
+                'text-sm',
+                !textOverride && (theme === 'dark' ? 'text-slate-400' : 'text-slate-600'),
+                textOverride && 'opacity-90'
+              )}
+            />
+          </div>
+        ) : (
+          schema.description && (
+            <p
+              className={cn(
+                'text-sm mb-6',
+                !textOverride && (theme === 'dark' ? 'text-slate-400' : 'text-slate-600'),
+                textOverride && 'opacity-90'
+              )}
+            >
+              {schema.description}
+            </p>
+          )
         )}
 
-        {/* Form Fields */}
-        {content}
-
-        {/* Submit Button */}
-        <div className={cn('mt-6', designMode && 'pointer-events-none opacity-40')}>
-          <button
-            type="submit"
-            style={{
-              backgroundColor: ps.primaryColor,
-              color: submitLabelColor,
-            }}
-            className={cn(
-              'w-full rounded-md px-4 py-2 font-medium transition-opacity duration-200',
-              'hover:opacity-90 active:opacity-80',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-              submitLabelColor === '#000000'
-                ? 'focus-visible:ring-slate-500'
-                : 'focus-visible:ring-white/70',
-              theme === 'dark' ? 'focus-visible:ring-offset-slate-900' : 'focus-visible:ring-offset-white'
-            )}
-          >
-            Submit
-          </button>
-        </div>
+        {/* Form body (fields + submit interleaved) */}
+        {formBody}
       </form>
     </TooltipProvider>
   );

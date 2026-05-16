@@ -5,7 +5,11 @@
  * viewport configurations, preview state, and renderer props.
  */
 
-import type { ComponentSchema } from '../watsonx/types';
+import type {
+  ComponentSchema,
+  ComponentSchemaMetaPatch,
+  FieldDefinition,
+} from '../watsonx/types';
 
 /**
  * Preview canvas: interact with the form vs design (layout) editing.
@@ -107,11 +111,23 @@ export interface PreviewProps {
   /** Reorder after drag-drop on canvas */
   onCanvasReorder?: (newFieldOrder: string[]) => void;
 
+  /** Reorder fields + submit on design canvas (tuning). */
+  onCanvasLayerReorder?: (newLayerOrder: string[]) => void;
+
   /** Cycle column span for a field (grid / two-column) */
   onCycleFieldColSpan?: (fieldId: string) => void;
 
   /** Toggle interact vs design (passed to preview controls) */
   onCanvasModeChange?: (mode: PreviewCanvasMode) => void;
+
+  /** Design mode: persist edits to schema title / description */
+  onDesignSchemaMetaChange?: (patch: ComponentSchemaMetaPatch) => void;
+
+  /** Design mode: persist field label, placeholder, or options */
+  onDesignFieldCopyChange?: (
+    fieldId: string,
+    patch: Partial<Pick<FieldDefinition, 'label' | 'placeholder' | 'options'>>
+  ) => void;
 }
 
 /**
@@ -151,7 +167,17 @@ export interface RendererProps {
 
   onCanvasReorder?: (newFieldOrder: string[]) => void;
 
+  /** Design canvas: reorder fields + submit when set (otherwise {@link onCanvasReorder} fields only). */
+  onCanvasLayerReorder?: (newLayerOrder: string[]) => void;
+
   onCycleFieldColSpan?: (fieldId: string) => void;
+
+  onDesignSchemaMetaChange?: (patch: ComponentSchemaMetaPatch) => void;
+
+  onDesignFieldCopyChange?: (
+    fieldId: string,
+    patch: Partial<Pick<FieldDefinition, 'label' | 'placeholder' | 'options'>>
+  ) => void;
 }
 
 /**
@@ -190,7 +216,16 @@ export interface PreviewFrameProps {
 
   onCanvasReorder?: (newFieldOrder: string[]) => void;
 
+  onCanvasLayerReorder?: (newLayerOrder: string[]) => void;
+
   onCycleFieldColSpan?: (fieldId: string) => void;
+
+  onDesignSchemaMetaChange?: (patch: ComponentSchemaMetaPatch) => void;
+
+  onDesignFieldCopyChange?: (
+    fieldId: string,
+    patch: Partial<Pick<FieldDefinition, 'label' | 'placeholder' | 'options'>>
+  ) => void;
 }
 
 /**

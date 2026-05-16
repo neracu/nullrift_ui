@@ -40,6 +40,7 @@ import {
 import type { FieldDefinition } from '@/lib/watsonx/types';
 import type { ComponentSchema } from '@/lib/watsonx/types';
 import { FIELD_TYPE_OPTIONS, LAYOUT_OPTIONS } from '@/types/tuning';
+import { SUBMIT_BUTTON_LAYER_ID, getEffectiveLayerOrder } from '@/lib/tuning/layer-order';
 import { cn } from '@/lib/utils';
 
 /** Radix Select requires `value` to match an item; schemas may carry unknown layout strings. */
@@ -70,7 +71,7 @@ export interface StructureControlsProps {
     options?: { insertAt?: number; insertAfterFieldId?: string }
   ) => void;
   onRemoveField: (fieldId: string) => void;
-  onReorderFields: (newOrder: string[]) => void;
+  onReorderLayers: (newOrder: string[]) => void;
   onModifyField: (fieldId: string, changes: Partial<FieldDefinition>) => void;
   onLayoutChange: (layout: ComponentSchema['layout']) => void;
   onDuplicateFields: (fieldIds: string[]) => void;
@@ -187,6 +188,80 @@ function SortableLayerRow({
   );
 }
 
+interface SortableSubmitLayerRowProps {
+  disabled: boolean;
+  selected: boolean;
+  highlighted: boolean;
+  onSelect: () => void;
+  rowRef: (el: HTMLDivElement | null) => void;
+}
+
+function SortableSubmitLayerRow({
+  disabled,
+  selected,
+  highlighted,
+  onSelect,
+  rowRef,
+}: SortableSubmitLayerRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: SUBMIT_BUTTON_LAYER_ID,
+    disabled,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+  };
+
+  const setRefs = (el: HTMLDivElement | null) => {
+    setNodeRef(el);
+    rowRef(el);
+  };
+
+  return (
+    <div
+      ref={setRefs}
+      style={style}
+      className={cn(
+        'flex items-center gap-1.5 rounded-md border border-border bg-muted/20 px-1.5 py-1 transition-colors duration-200',
+        'hover:bg-muted/40',
+        selected && 'ring-1 ring-ring',
+        highlighted && 'border-primary/60 bg-primary/5',
+        isDragging && 'z-10 opacity-90 shadow-sm'
+      )}
+    >
+      <button
+        type="button"
+        className={cn(
+          'flex size-7 shrink-0 cursor-grab items-center justify-center rounded border border-border',
+          'text-muted-foreground hover:bg-muted active:cursor-grabbing',
+          disabled && 'pointer-events-none opacity-40'
+        )}
+        aria-label="Drag to reorder submit button"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          'min-w-0 flex-1 cursor-pointer rounded px-1 py-0.5 text-left',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+        )}
+      >
+        <div className="truncate text-sm font-medium text-foreground">Submit button</div>
+        <div className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+          <span className="font-mono text-[11px] leading-tight sm:text-xs">{SUBMIT_BUTTON_LAYER_ID}</span>
+          <span className="text-border">·</span>
+          <span>submit</span>
+        </div>
+      </button>
+    </div>
+  );
+}
+
 /**
  * Structure management: layout, sortable layers, and field properties.
  */
@@ -196,7 +271,7 @@ export function StructureControls({
   onFieldSelectionChange,
   onAddField,
   onRemoveField,
-  onReorderFields,
+  onReorderLayers,
   onModifyField,
   onLayoutChange,
   onDuplicateFields,
@@ -245,19 +320,19 @@ export function StructureControls({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const ids = useMemo(() => schema.fields.map((f) => f.id), [schema.fields]);
+  const layerIds = useMemo(() => getEffectiveLayerOrder(schema), [schema]);
 
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
       if (disabled) return;
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      const oldIndex = ids.indexOf(String(active.id));
-      const newIndex = ids.indexOf(String(over.id));
+      const oldIndex = layerIds.indexOf(String(active.id));
+      const newIndex = layerIds.indexOf(String(over.id));
       if (oldIndex < 0 || newIndex < 0) return;
-      onReorderFields(arrayMove(ids, oldIndex, newIndex));
+      onReorderLayers(arrayMove(layerIds, oldIndex, newIndex));
     },
-    [disabled, ids, onReorderFields]
+    [disabled, layerIds, onReorderLayers]
   );
 
   const selectField = useCallback(
@@ -347,33 +422,51 @@ export function StructureControls({
           <ListTree className="size-3.5 shrink-0" aria-hidden />
           <span>Layers</span>
           <span className="text-xs font-normal tabular-nums text-muted-foreground/90">
-            ({schema.fields.length})
+            ({layerIds.length})
           </span>
         </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={ids}>
+          <SortableContext items={layerIds}>
             <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-md border border-border bg-muted/10 p-1.5">
               {schema.fields.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">No fields yet.</p>
-              ) : (
-                schema.fields.map((field) => (
-                  <SortableLayerRow
-                    key={field.id}
-                    field={field}
-                    disabled={disabled}
-                    selected={selectedFieldId === field.id}
-                    highlighted={highlightedFieldIds.includes(field.id)}
-                    onSelect={() => selectField(field.id)}
-                    onDuplicate={() => onDuplicateFields([field.id])}
-                    onRemove={() => handleRemove(field.id, field.label)}
-                    rowRef={(el) => {
-                      if (el) rowRefs.current.set(field.id, el);
-                      else rowRefs.current.delete(field.id);
-                    }}
-                  />
-                ))
-              )}
+                <p className="py-3 text-center text-sm text-muted-foreground">No fields yet.</p>
+              ) : null}
+              {layerIds.map((layerId) => {
+                  if (layerId === SUBMIT_BUTTON_LAYER_ID) {
+                    return (
+                      <SortableSubmitLayerRow
+                        key={SUBMIT_BUTTON_LAYER_ID}
+                        disabled={disabled}
+                        selected={false}
+                        highlighted={false}
+                        onSelect={() => {
+                          setSelectedFieldId(null);
+                          onFieldSelectionChange?.([]);
+                        }}
+                        rowRef={() => {}}
+                      />
+                    );
+                  }
+                  const field = schema.fields.find((f) => f.id === layerId);
+                  if (!field) return null;
+                  return (
+                    <SortableLayerRow
+                      key={field.id}
+                      field={field}
+                      disabled={disabled}
+                      selected={selectedFieldId === field.id}
+                      highlighted={highlightedFieldIds.includes(field.id)}
+                      onSelect={() => selectField(field.id)}
+                      onDuplicate={() => onDuplicateFields([field.id])}
+                      onRemove={() => handleRemove(field.id, field.label)}
+                      rowRef={(el) => {
+                        if (el) rowRefs.current.set(field.id, el);
+                        else rowRefs.current.delete(field.id);
+                      }}
+                    />
+                  );
+                })}
             </div>
           </SortableContext>
         </DndContext>
