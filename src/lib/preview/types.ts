@@ -191,22 +191,16 @@ export interface PreviewFrameProps {
 export interface PreviewControlsProps {
   /** Current viewport */
   viewport: ViewportSize;
-  
-  /** Current theme */
-  theme: PreviewTheme;
-  
+
   /** Current zoom level */
   zoom: number;
-  
+
   /** Whether preview is loading */
   isLoading?: boolean;
-  
+
   /** Callback when viewport changes */
   onViewportChange: (viewport: ViewportSize) => void;
-  
-  /** Callback when theme changes */
-  onThemeChange: (theme: PreviewTheme) => void;
-  
+
   /** Callback when zoom changes */
   onZoomChange: (zoom: number) => void;
   

@@ -55,11 +55,9 @@ export function PreviewCanvas({
 
           <PreviewControls
             viewport={preview.state.viewport}
-            theme={preview.state.theme}
             zoom={preview.state.zoom}
             isLoading={preview.state.isLoading}
             onViewportChange={preview.setViewport}
-            onThemeChange={preview.setTheme}
             onZoomChange={preview.setZoom}
             onReset={preview.reset}
             canvasMode={canvasMode}
