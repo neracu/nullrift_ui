@@ -12,7 +12,7 @@ import { PreviewControls } from './preview-controls';
 import { PreviewFrame } from './preview-frame';
 import { usePreview } from '@/hooks/use-preview';
 import type { PreviewProps } from '@/lib/preview/types';
-import { cn } from '@/lib/utils';
+import { cn, formatSchemaDisplayName } from '@/lib/utils';
 
 /**
  * Preview Canvas Component
@@ -48,7 +48,9 @@ export function PreviewCanvas({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-white">Interactive Preview</h2>
-            <p className="mt-1 text-xs text-slate-400">{schema.name || 'Generated Component'}</p>
+            <p className="mt-1 text-xs text-slate-400">
+              {schema.name ? formatSchemaDisplayName(schema.name) : 'Generated Component'}
+            </p>
           </div>
 
           <PreviewControls

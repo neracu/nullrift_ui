@@ -20,7 +20,7 @@ import {
 import { arrayMove, SortableContext, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { ComponentSchema, FieldDefinition } from '../watsonx/types';
 import type { RendererProps, PreviewTheme } from './types';
-import { cn } from '../utils';
+import { cn, formatSchemaDisplayName } from '../utils';
 import { DesignFieldRow } from '@/components/builder/design-field-row';
 
 /** Focus ring uses `--preview-primary` set on the preview form. */
@@ -794,7 +794,7 @@ function createFormWrapper(
           )}
           style={textOverride && ps.textColor ? { color: ps.textColor } : undefined}
         >
-          {schema.name}
+          {formatSchemaDisplayName(schema.name)}
         </h2>
       )}
 

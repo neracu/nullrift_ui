@@ -27,6 +27,18 @@ export function generateId(): string {
 }
 
 /**
+ * Turn schema identifiers (PascalCase, camelCase, snake_case, kebab-case) into spaced title text for preview labels.
+ */
+export function formatSchemaDisplayName(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return raw;
+  let out = trimmed.replace(/[-_]+/g, ' ');
+  out = out.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+  out = out.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+/**
  * Debounce function for performance optimization
  */
 export function debounce<T extends (...args: any[]) => any>(
