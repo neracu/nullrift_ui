@@ -63,7 +63,7 @@ export function DesignFieldRow({
         type="button"
         className={cn(
           'mt-1 flex size-8 shrink-0 items-center justify-center rounded-md border border-border',
-          'text-muted-foreground hover:bg-muted hover:text-foreground',
+          'text-slate-500 hover:bg-muted hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100',
           disabledSortable && 'pointer-events-none opacity-40'
         )}
         aria-label={`Drag to reorder field ${id}`}
@@ -97,7 +97,7 @@ export function DesignFieldRow({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 gap-1 text-xs"
+              className="h-7 gap-1 text-xs text-slate-800 dark:text-slate-100"
               onClick={(e) => {
                 e.stopPropagation();
                 onColCycle();

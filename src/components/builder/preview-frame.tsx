@@ -10,7 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { DynamicRenderer } from '@/lib/preview/renderer';
-import type { PreviewFrameProps } from '@/lib/preview/types';
+import type { PreviewFrameProps, PreviewTheme } from '@/lib/preview/types';
 import { VIEWPORT_CONFIGS } from '@/lib/preview/types';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +38,10 @@ export function PreviewFrame({
 
   // Get viewport configuration
   const viewportConfig = VIEWPORT_CONFIGS[state.viewport];
+
+  const schemaTheme = schema.styling?.theme;
+  const effectiveTheme: PreviewTheme =
+    schemaTheme === 'light' || schemaTheme === 'dark' ? schemaTheme : state.theme;
 
   // Initialize preview
   useEffect(() => {
@@ -111,7 +115,7 @@ export function PreviewFrame({
           style={containerStyle}
           className={cn(
             'w-full rounded-lg border shadow-2xl transition-all duration-200',
-            state.theme === 'dark'
+            effectiveTheme === 'dark'
               ? 'bg-slate-950 border-slate-800'
               : 'bg-white border-slate-200'
           )}
@@ -122,7 +126,7 @@ export function PreviewFrame({
               schema={schema}
               formData={state.formData}
               errors={state.errors}
-              theme={state.theme}
+              theme={effectiveTheme}
               onFieldChange={onFieldChange}
               onSubmit={handleSubmit}
               canvasMode={canvasMode}

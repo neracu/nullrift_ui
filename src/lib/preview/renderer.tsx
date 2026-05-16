@@ -21,6 +21,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates } from '@dnd-ki
 import type { ComponentSchema, FieldDefinition } from '../watsonx/types';
 import type { RendererProps, PreviewTheme } from './types';
 import { cn, formatSchemaDisplayName } from '../utils';
+import { getContrastForegroundForHex } from '@/lib/tuning/color-contrast';
 import { DesignFieldRow } from '@/components/builder/design-field-row';
 
 /** Focus ring uses `--preview-primary` set on the preview form. */
@@ -64,6 +65,23 @@ function resolvePreviewStyling(schema: ComponentSchema) {
     fontFamilyClass,
     fontSizeClass,
   };
+}
+
+/** True when schema tuning sets a custom body text color (labels, titles, etc.). */
+function hasPreviewTextColorOverride(schema: ComponentSchema): boolean {
+  return Boolean(schema.styling?.textColor);
+}
+
+/** Labels and static copy inherit `form` color when tuning overrides body text. */
+function previewStaticTextClass(
+  theme: PreviewTheme,
+  textColorOverride: boolean,
+  base: string
+): string {
+  return cn(
+    base,
+    !textColorOverride && (theme === 'dark' ? 'text-slate-200' : 'text-slate-700')
+  );
 }
 
 function fieldColSpanClass(
@@ -169,10 +187,11 @@ export function DynamicRenderer({
   };
 
   const showColTool = schema.layout === 'two-column' || schema.layout === 'grid';
+  const textColorOverride = hasPreviewTextColorOverride(schema);
 
   const buildFieldInner = (field: FieldDefinition) => (
     <div className="space-y-2">
-      {createFieldElement(field, formData, errors, theme, onFieldChange)}
+      {createFieldElement(field, formData, errors, theme, onFieldChange, textColorOverride)}
     </div>
   );
 
@@ -221,7 +240,7 @@ export function DynamicRenderer({
       }
       return (
         <div key={field.id} className={cn('space-y-2', fieldColSpanClass(schema.layout, field.layout?.colSpan))}>
-          {createFieldElement(field, formData, errors, theme, onFieldChange)}
+          {createFieldElement(field, formData, errors, theme, onFieldChange, textColorOverride)}
         </div>
       );
     });
@@ -254,7 +273,8 @@ function createFieldElement(
   formData: Record<string, any>,
   errors: Record<string, string>,
   theme: PreviewTheme,
-  onFieldChange: (fieldId: string, value: any) => void
+  onFieldChange: (fieldId: string, value: any) => void,
+  textColorOverride: boolean
 ): ReactElement {
   const value = formData[field.id] ?? '';
   const error = errors[field.id];
@@ -262,28 +282,28 @@ function createFieldElement(
 
   switch (field.type) {
     case 'input':
-      return createInputField(field, value, error, theme, isRequired, onFieldChange);
-    
+      return createInputField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+
     case 'textarea':
-      return createTextareaField(field, value, error, theme, isRequired, onFieldChange);
-    
+      return createTextareaField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+
     case 'select':
-      return createSelectField(field, value, error, theme, isRequired, onFieldChange);
-    
+      return createSelectField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+
     case 'checkbox':
-      return createCheckboxField(field, value, error, theme, onFieldChange);
-    
+      return createCheckboxField(field, value, error, theme, onFieldChange, textColorOverride);
+
     case 'radio':
-      return createRadioField(field, value, error, theme, isRequired, onFieldChange);
-    
+      return createRadioField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+
     case 'date':
-      return createDateField(field, value, error, theme, isRequired, onFieldChange);
-    
+      return createDateField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+
     case 'file':
-      return createFileField(field, value, error, theme, isRequired, onFieldChange);
-    
+      return createFileField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+
     default:
-      return createInputField(field, value, error, theme, isRequired, onFieldChange);
+      return createInputField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
   }
 }
 
@@ -296,14 +316,15 @@ function createInputField(
   error: string | undefined,
   theme: PreviewTheme,
   isRequired: boolean,
-  onFieldChange: (fieldId: string, value: any) => void
+  onFieldChange: (fieldId: string, value: any) => void,
+  textColorOverride: boolean
 ): ReactElement {
   const inputClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors',
     PREVIEW_FOCUS_RING,
     theme === 'dark'
-      ? 'bg-slate-900 border-slate-700 text-slate-100'
-      : 'bg-white border-slate-300 text-slate-900',
+      ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500'
+      : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400',
     error && 'border-red-500 focus:ring-red-500'
   );
 
@@ -311,10 +332,7 @@ function createInputField(
     <>
       <label
         htmlFor={field.id}
-        className={cn(
-          'block text-sm font-medium mb-1',
-          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
-        )}
+        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
       >
         {field.label}
         {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -352,14 +370,15 @@ function createTextareaField(
   error: string | undefined,
   theme: PreviewTheme,
   isRequired: boolean,
-  onFieldChange: (fieldId: string, value: any) => void
+  onFieldChange: (fieldId: string, value: any) => void,
+  textColorOverride: boolean
 ): ReactElement {
   const textareaClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors resize-y',
     PREVIEW_FOCUS_RING,
     theme === 'dark'
-      ? 'bg-slate-900 border-slate-700 text-slate-100'
-      : 'bg-white border-slate-300 text-slate-900',
+      ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500'
+      : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400',
     error && 'border-red-500 focus:ring-red-500'
   );
 
@@ -367,10 +386,7 @@ function createTextareaField(
     <>
       <label
         htmlFor={field.id}
-        className={cn(
-          'block text-sm font-medium mb-1',
-          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
-        )}
+        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
       >
         {field.label}
         {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -408,7 +424,8 @@ function createSelectField(
   error: string | undefined,
   theme: PreviewTheme,
   isRequired: boolean,
-  onFieldChange: (fieldId: string, value: any) => void
+  onFieldChange: (fieldId: string, value: any) => void,
+  textColorOverride: boolean
 ): ReactElement {
   const selectClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors',
@@ -423,10 +440,7 @@ function createSelectField(
     <>
       <label
         htmlFor={field.id}
-        className={cn(
-          'block text-sm font-medium mb-1',
-          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
-        )}
+        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
       >
         {field.label}
         {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -472,7 +486,8 @@ function createCheckboxField(
   value: any,
   error: string | undefined,
   theme: PreviewTheme,
-  onFieldChange: (fieldId: string, value: any) => void
+  onFieldChange: (fieldId: string, value: any) => void,
+  textColorOverride: boolean
 ): ReactElement {
   const checked = Boolean(value);
 
@@ -497,10 +512,7 @@ function createCheckboxField(
         />
         <label
           htmlFor={field.id}
-          className={cn(
-            'text-sm font-medium',
-            theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
-          )}
+          className={previewStaticTextClass(theme, textColorOverride, 'text-sm font-medium')}
         >
           {field.label}
         </label>
@@ -527,16 +539,14 @@ function createRadioField(
   error: string | undefined,
   theme: PreviewTheme,
   isRequired: boolean,
-  onFieldChange: (fieldId: string, value: any) => void
+  onFieldChange: (fieldId: string, value: any) => void,
+  textColorOverride: boolean
 ): ReactElement {
   return (
     <>
       <fieldset>
         <legend
-          className={cn(
-            'block text-sm font-medium mb-2',
-            theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
-          )}
+          className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-2')}
         >
           {field.label}
           {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -562,10 +572,7 @@ function createRadioField(
               />
               <label
                 htmlFor={`${field.id}-${option.value}`}
-                className={cn(
-                  'text-sm',
-                  theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
-                )}
+                className={previewStaticTextClass(theme, textColorOverride, 'text-sm')}
               >
                 {option.label}
               </label>
@@ -595,14 +602,15 @@ function createDateField(
   error: string | undefined,
   theme: PreviewTheme,
   isRequired: boolean,
-  onFieldChange: (fieldId: string, value: any) => void
+  onFieldChange: (fieldId: string, value: any) => void,
+  textColorOverride: boolean
 ): ReactElement {
   const inputClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors',
     PREVIEW_FOCUS_RING,
     theme === 'dark'
-      ? 'bg-slate-900 border-slate-700 text-slate-100'
-      : 'bg-white border-slate-300 text-slate-900',
+      ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500'
+      : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400',
     error && 'border-red-500 focus:ring-red-500'
   );
 
@@ -610,10 +618,7 @@ function createDateField(
     <>
       <label
         htmlFor={field.id}
-        className={cn(
-          'block text-sm font-medium mb-1',
-          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
-        )}
+        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
       >
         {field.label}
         {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -650,7 +655,8 @@ function createFileField(
   error: string | undefined,
   theme: PreviewTheme,
   isRequired: boolean,
-  onFieldChange: (fieldId: string, value: any) => void
+  onFieldChange: (fieldId: string, value: any) => void,
+  textColorOverride: boolean
 ): ReactElement {
   const inputClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors',
@@ -667,10 +673,7 @@ function createFileField(
     <>
       <label
         htmlFor={field.id}
-        className={cn(
-          'block text-sm font-medium mb-1',
-          theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
-        )}
+        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
       >
         {field.label}
         {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -765,6 +768,7 @@ function createFormWrapper(
     ['--preview-primary' as string]: ps.primaryColor,
     ['--preview-secondary' as string]: ps.secondaryColor,
     ...(bgOverride && ps.backgroundColor ? { backgroundColor: ps.backgroundColor } : {}),
+    ...(textOverride && ps.textColor ? { color: ps.textColor } : {}),
   };
 
   const formClasses = cn(
@@ -776,6 +780,8 @@ function createFormWrapper(
     !bgOverride &&
       (theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200')
   );
+
+  const submitLabelColor = getContrastForegroundForHex(ps.primaryColor);
 
   return (
     <form
@@ -792,7 +798,6 @@ function createFormWrapper(
             'text-2xl font-semibold mb-6',
             !textOverride && (theme === 'dark' ? 'text-slate-100' : 'text-slate-900')
           )}
-          style={textOverride && ps.textColor ? { color: ps.textColor } : undefined}
         >
           {formatSchemaDisplayName(schema.name)}
         </h2>
@@ -803,13 +808,9 @@ function createFormWrapper(
         <p
           className={cn(
             'text-sm mb-6',
-            !textOverride && (theme === 'dark' ? 'text-slate-400' : 'text-slate-600')
+            !textOverride && (theme === 'dark' ? 'text-slate-400' : 'text-slate-600'),
+            textOverride && 'opacity-90'
           )}
-          style={
-            textOverride && ps.textColor
-              ? { color: ps.textColor, opacity: 0.88 }
-              : undefined
-          }
         >
           {schema.description}
         </p>
@@ -822,12 +823,18 @@ function createFormWrapper(
       <div className={cn('mt-6', designMode && 'pointer-events-none opacity-40')}>
         <button
           type="submit"
-          style={{ backgroundColor: ps.primaryColor }}
+          style={{
+            backgroundColor: ps.primaryColor,
+            color: submitLabelColor,
+          }}
           className={cn(
-            'w-full px-4 py-2 rounded-md font-medium transition-opacity',
-            'text-white hover:opacity-90 active:opacity-80',
-            'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2',
-            theme === 'dark' ? 'focus:ring-offset-slate-900' : 'focus:ring-offset-white'
+            'w-full rounded-md px-4 py-2 font-medium transition-opacity duration-200',
+            'hover:opacity-90 active:opacity-80',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+            submitLabelColor === '#000000'
+              ? 'focus-visible:ring-slate-500'
+              : 'focus-visible:ring-white/70',
+            theme === 'dark' ? 'focus-visible:ring-offset-slate-900' : 'focus-visible:ring-offset-white'
           )}
         >
           Submit

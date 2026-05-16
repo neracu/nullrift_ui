@@ -40,6 +40,9 @@ export interface StyleOverrides {
   
   /** Spacing preset */
   spacing?: 'compact' | 'normal' | 'relaxed';
+
+  /** Form / preview surface theme (mirrors StylingConfig.theme). */
+  theme?: 'light' | 'dark' | 'system';
   
   // Colors
   /** Primary color (hex) */
@@ -347,6 +350,85 @@ export const FONT_SIZE_OPTIONS = [
   { label: 'Base', value: 'base' },
   { label: 'Large', value: 'lg' },
 ] as const;
+
+/**
+ * Theme options for preview / export surface (matches StylingConfig.theme).
+ */
+export const THEME_OPTIONS = [
+  { label: 'System', value: 'system' as const },
+  { label: 'Light', value: 'light' as const },
+  { label: 'Dark', value: 'dark' as const },
+] as const;
+
+/**
+ * Curated SaaS-safe palettes for one-click color application in the tuning panel.
+ */
+export const TUNING_COLOR_PRESETS = [
+  {
+    id: 'default',
+    label: 'Default',
+    primaryColor: '#2563eb',
+    secondaryColor: '#64748b',
+    backgroundColor: '#ffffff',
+    textColor: '#0f172a',
+  },
+  {
+    id: 'slate',
+    label: 'Slate',
+    primaryColor: '#334155',
+    secondaryColor: '#64748b',
+    backgroundColor: '#f8fafc',
+    textColor: '#0f172a',
+  },
+  {
+    id: 'teal',
+    label: 'Teal',
+    primaryColor: '#0d9488',
+    secondaryColor: '#14b8a6',
+    backgroundColor: '#f0fdfa',
+    textColor: '#134e4a',
+  },
+  {
+    id: 'violet',
+    label: 'Violet',
+    primaryColor: '#7c3aed',
+    secondaryColor: '#a78bfa',
+    backgroundColor: '#faf5ff',
+    textColor: '#1e1b4b',
+  },
+  {
+    id: 'amber',
+    label: 'Amber',
+    primaryColor: '#d97706',
+    secondaryColor: '#f59e0b',
+    backgroundColor: '#fffbeb',
+    textColor: '#422006',
+  },
+  {
+    id: 'dark-surface',
+    label: 'Dark UI',
+    primaryColor: '#38bdf8',
+    secondaryColor: '#94a3b8',
+    backgroundColor: '#0f172a',
+    textColor: '#f1f5f9',
+  },
+] as const;
+
+/**
+ * Values applied by the Style panel "Reset styles" control: restores defaults and clears optional keys.
+ */
+export const STYLE_PANEL_RESET_VALUES: Partial<StyleOverrides> = {
+  borderRadius: 'md',
+  spacing: 'normal',
+  fontFamily: 'sans',
+  fontSize: 'base',
+  primaryColor: undefined,
+  secondaryColor: undefined,
+  backgroundColor: undefined,
+  textColor: undefined,
+  theme: undefined,
+  customClasses: undefined,
+};
 
 /**
  * Layout options

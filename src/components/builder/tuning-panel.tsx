@@ -12,11 +12,33 @@ import { Palette, Layout, Settings, Undo, Redo, RotateCcw, X } from 'lucide-reac
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TuningSection } from './tuning-section';
-import { StyleControls } from './style-controls';
+import { StyleControls, type StyleControlsProps } from './style-controls';
 import { StructureControls } from './structure-controls';
 import { BehaviorControls } from './behavior-controls';
 import type { UseTuningReturn } from '@/types/tuning';
 import { cn } from '@/lib/utils';
+
+const DEFAULT_TUNING_SECTIONS = {
+  style: true,
+  structure: true,
+  behavior: true,
+} as const;
+
+export interface TuningPanelSections {
+  style?: boolean;
+  structure?: boolean;
+  behavior?: boolean;
+}
+
+export interface TuningPanelClassNames {
+  card?: string;
+  header?: string;
+  toolbar?: string;
+  scrollArea?: string;
+  footer?: string;
+  debug?: string;
+  styleControlSlots?: StyleControlsProps['slotClassNames'];
+}
 
 export interface TuningPanelProps {
   /** Tuning API from useTuning (owned by parent workspace). */
@@ -28,14 +50,27 @@ export interface TuningPanelProps {
   /** Callback when panel is closed */
   onClose?: () => void;
 
-  /** Optional className */
+  /** Optional className on root card (merged with defaults). */
   className?: string;
+
+  /** Optional class names for panel regions and style control slots. */
+  classNames?: TuningPanelClassNames;
+
+  /** Toggle Style / Structure / Behavior sections (default: all visible). */
+  sections?: TuningPanelSections;
 }
 
 /**
  * Main tuning panel component
  */
-export function TuningPanel({ tuning, highlightedFieldIds = [], onClose, className }: TuningPanelProps) {
+export function TuningPanel({
+  tuning,
+  highlightedFieldIds = [],
+  onClose,
+  className,
+  classNames,
+  sections: sectionsProp,
+}: TuningPanelProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -64,14 +99,22 @@ export function TuningPanel({ tuning, highlightedFieldIds = [], onClose, classNa
   const historyLabel =
     historyLen === 0 ? '0 / 0' : `${tuning.state.historyIndex + 1} / ${historyLen}`;
 
+  const sections = { ...DEFAULT_TUNING_SECTIONS, ...sectionsProp };
+
   return (
     <Card
       className={cn(
         'flex h-full flex-col overflow-hidden border-border bg-card text-card-foreground shadow-sm',
-        className
+        className,
+        classNames?.card
       )}
     >
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      <div
+        className={cn(
+          'flex items-center justify-between border-b border-border px-4 py-3',
+          classNames?.header
+        )}
+      >
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
             <Palette className="size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -93,7 +136,12 @@ export function TuningPanel({ tuning, highlightedFieldIds = [], onClose, classNa
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/30 px-3 py-2">
+      <div
+        className={cn(
+          'flex flex-wrap items-center gap-2 border-b border-border bg-muted/30 px-3 py-2',
+          classNames?.toolbar
+        )}
+      >
         <Button
           variant="outline"
           size="sm"
@@ -136,32 +184,47 @@ export function TuningPanel({ tuning, highlightedFieldIds = [], onClose, classNa
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <TuningSection title="Style" icon={<Palette className="h-4 w-4" />} defaultOpen={true}>
-          <StyleControls styleOverrides={tuning.state.styleOverrides} onStyleChange={tuning.updateStyle} />
-        </TuningSection>
+      <div className={cn('flex-1 overflow-y-auto', classNames?.scrollArea)}>
+        {sections.style && (
+          <TuningSection title="Style" icon={<Palette className="h-4 w-4" />} defaultOpen={true}>
+            <StyleControls
+              styleOverrides={tuning.state.styleOverrides}
+              onStyleChange={tuning.updateStyle}
+              slotClassNames={classNames?.styleControlSlots}
+            />
+          </TuningSection>
+        )}
 
-        <TuningSection title="Structure" icon={<Layout className="h-4 w-4" />} defaultOpen={false}>
-          <StructureControls
-            schema={tuning.currentSchema}
-            highlightedFieldIds={highlightedFieldIds}
-            onAddField={tuning.addField}
-            onRemoveField={tuning.removeField}
-            onReorderFields={tuning.reorderFields}
-            onModifyField={tuning.modifyField}
-            onLayoutChange={tuning.changeLayout}
-          />
-        </TuningSection>
+        {sections.structure && (
+          <TuningSection title="Structure" icon={<Layout className="h-4 w-4" />} defaultOpen={false}>
+            <StructureControls
+              schema={tuning.currentSchema}
+              highlightedFieldIds={highlightedFieldIds}
+              onAddField={tuning.addField}
+              onRemoveField={tuning.removeField}
+              onReorderFields={tuning.reorderFields}
+              onModifyField={tuning.modifyField}
+              onLayoutChange={tuning.changeLayout}
+            />
+          </TuningSection>
+        )}
 
-        <TuningSection title="Behavior" icon={<Settings className="h-4 w-4" />} defaultOpen={false}>
-          <BehaviorControls
-            behaviorSettings={tuning.state.behaviorSettings}
-            onBehaviorChange={tuning.updateBehavior}
-          />
-        </TuningSection>
+        {sections.behavior && (
+          <TuningSection title="Behavior" icon={<Settings className="h-4 w-4" />} defaultOpen={false}>
+            <BehaviorControls
+              behaviorSettings={tuning.state.behaviorSettings}
+              onBehaviorChange={tuning.updateBehavior}
+            />
+          </TuningSection>
+        )}
       </div>
 
-      <div className="border-t border-border bg-muted/20 px-4 py-2.5">
+      <div
+        className={cn(
+          'border-t border-border bg-muted/20 px-4 py-2.5',
+          classNames?.footer
+        )}
+      >
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>History: {historyLabel}</span>
           <span>
@@ -172,7 +235,12 @@ export function TuningPanel({ tuning, highlightedFieldIds = [], onClose, classNa
       </div>
 
       {process.env.NODE_ENV === 'development' && (
-        <details className="border-t border-border bg-muted/15 px-4 py-2">
+        <details
+          className={cn(
+            'border-t border-border bg-muted/15 px-4 py-2',
+            classNames?.debug
+          )}
+        >
           <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
             Debug Info
           </summary>

@@ -24,8 +24,14 @@ export interface TuningSectionProps {
   /** Section content */
   children: React.ReactNode;
   
-  /** Optional className for customization */
+  /** Optional className for outer wrapper */
   className?: string;
+
+  /** className for the collapsible trigger button */
+  triggerClassName?: string;
+
+  /** className for the inner content wrapper (padding area) */
+  contentClassName?: string;
 }
 
 /**
@@ -37,6 +43,8 @@ export function TuningSection({
   defaultOpen = true,
   children,
   className,
+  triggerClassName,
+  contentClassName,
 }: TuningSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -46,9 +54,10 @@ export function TuningSection({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors',
+          'flex w-full cursor-pointer items-center justify-between px-4 py-2.5 text-left text-sm transition-colors duration-200',
           'hover:bg-muted/50',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          triggerClassName
         )}
         aria-expanded={isOpen}
       >
@@ -69,11 +78,11 @@ export function TuningSection({
       {/* Section Content */}
       <div
         className={cn(
-          'overflow-hidden transition-all duration-200 ease-in-out',
+          'overflow-hidden motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-in-out',
           isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         )}
       >
-        <div className="space-y-3 px-4 pb-4 pt-1">
+        <div className={cn('space-y-3 px-4 pb-4 pt-1', contentClassName)}>
           {children}
         </div>
       </div>

@@ -7,6 +7,11 @@
 
 import type { ComponentSchema, StylingConfig } from '@/lib/watsonx/types';
 import type { StyleOverrides } from '@/types/tuning';
+import {
+  getContrastForegroundForHex,
+  hexToRgb as hexToRgbUtil,
+  isValidHexColor,
+} from '@/lib/tuning/color-contrast';
 
 /**
  * Style Transformer Class
@@ -45,6 +50,10 @@ export class StyleTransformer {
 
     if ('spacing' in overrides) {
       styling.spacing = overrides.spacing;
+    }
+
+    if ('theme' in overrides) {
+      styling.theme = overrides.theme;
     }
 
     if ('primaryColor' in overrides) {
@@ -380,35 +389,21 @@ export class StyleTransformer {
    * Validate color format (hex)
    */
   isValidColor(color: string): boolean {
-    return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
+    return isValidHexColor(color);
   }
 
   /**
    * Convert color to RGB
    */
   hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-      ? {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
-      : null;
+    return hexToRgbUtil(hex);
   }
 
   /**
    * Get contrast color (black or white) for a given background color
    */
   getContrastColor(backgroundColor: string): string {
-    const rgb = this.hexToRgb(backgroundColor);
-    if (!rgb) return '#000000';
-
-    // Calculate relative luminance
-    const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-
-    // Return black for light backgrounds, white for dark backgrounds
-    return luminance > 0.5 ? '#000000' : '#FFFFFF';
+    return getContrastForegroundForHex(backgroundColor);
   }
 }
 
