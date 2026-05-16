@@ -70,7 +70,7 @@ export const Navbar = () => {
           className="ml-2"
           asChild
         >
-          <Link href="/builder">
+          <Link href="/login">
             Try Free
           </Link>
         </Button>

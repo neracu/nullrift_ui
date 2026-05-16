@@ -797,7 +797,7 @@ gantt
 
 ---
 
-#### **Sprint 6: Code Export System (Hours 36-42)**
+#### **Sprint 6: Code Export System (Hours 36-42)** (done)
 
 **IBM Bob Tasks:**
 - [ ] Implement React exporter in [`src/lib/export/react-exporter.ts`](src/lib/export/react-exporter.ts)
@@ -835,7 +835,7 @@ gantt
 
 ---
 
-#### **Sprint 7: Polish & Demo Preparation (Hours 42-48)**
+#### **Sprint 7: Polish & Demo Preparation (Hours 42-48)** (done)
 
 **Frontend Team Tasks:**
 - [ ] Add Aceternity animations throughout app:

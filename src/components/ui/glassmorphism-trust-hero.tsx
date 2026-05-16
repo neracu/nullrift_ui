@@ -123,7 +123,7 @@ export default function HeroSection() {
 
             <div className="animate-fade-in delay-300 flex flex-col gap-4 sm:flex-row">
               <Link
-                href="/builder"
+                href="/login"
                 className="group inline-flex items-center justify-center gap-2 rounded-full bg-neon-pink px-8 py-4 text-sm font-semibold text-white shadow-glow-pink transition-all hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,0,110,0.7)] active:scale-[0.98]"
               >
                 Start Building Free

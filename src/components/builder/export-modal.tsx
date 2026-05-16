@@ -9,11 +9,14 @@
 
 import { useState } from 'react';
 import { X, Download, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { CodeViewer } from './code-viewer';
 import { downloadZip, formatFileSize } from '@/lib/export';
+import { fadeIn, scaleIn } from '@/lib/animations/variants';
 import type { ComponentSchema } from '@/lib/watsonx/types';
 import type { TuningState } from '@/types/tuning';
 import type { ExportFormat, ExportOptions, ExportResponse } from '@/types/export';
@@ -85,9 +88,16 @@ export function ExportModal({
       const result: ExportResponse = await response.json();
       setExportResult(result);
       setPhase('preview');
+      toast.success('Export generated successfully!', {
+        description: `${result.metadata.fileCount} file(s) ready to download`,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Export failed');
+      const errorMsg = err instanceof Error ? err.message : 'Export failed';
+      setError(errorMsg);
       setPhase('error');
+      toast.error('Export failed', {
+        description: errorMsg,
+      });
     }
   };
 
@@ -97,22 +107,32 @@ export function ExportModal({
   const handleDownload = () => {
     if (!exportResult) return;
 
-    if (exportResult.files.length === 1) {
-      // Single file - download directly
-      const file = exportResult.files[0];
-      const blob = new Blob([file.content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = file.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } else if (exportResult.zipData) {
-      // Multiple files - download as ZIP
-      const filename = `${exportResult.metadata.componentName.toLowerCase()}-${selectedFormat}.zip`;
-      downloadZip(exportResult.zipData, filename);
+    try {
+      if (exportResult.files.length === 1) {
+        // Single file - download directly
+        const file = exportResult.files[0];
+        const blob = new Blob([file.content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success('File downloaded successfully!');
+      } else if (exportResult.zipData) {
+        // Multiple files - download as ZIP
+        const filename = `${exportResult.metadata.componentName.toLowerCase()}-${selectedFormat}.zip`;
+        downloadZip(exportResult.zipData, filename);
+        toast.success('ZIP file downloaded successfully!', {
+          description: `${exportResult.metadata.fileCount} files included`,
+        });
+      }
+    } catch (err) {
+      toast.error('Download failed', {
+        description: 'Please try again',
+      });
     }
   };
 
@@ -154,8 +174,23 @@ export function ExportModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={handleClose}
+        >
+          <motion.div
+            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={scaleIn}
+            onClick={(e) => e.stopPropagation()}
+          >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -371,8 +406,10 @@ export function ExportModal({
             </Button>
           )}
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

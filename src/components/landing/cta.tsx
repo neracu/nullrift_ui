@@ -79,7 +79,7 @@ export const CTA = () => {
                 className="flex flex-col items-center justify-center gap-4 pt-2 sm:flex-row"
               >
                 <Button variant="neon" size="xl" className="group" asChild>
-                  <Link href="/builder">
+                  <Link href="/login">
                     Try NullRift UI Free
                     <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>

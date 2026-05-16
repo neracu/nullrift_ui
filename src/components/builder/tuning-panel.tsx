@@ -90,15 +90,18 @@ export function TuningPanel({
     <Card
       className={cn(
         'flex h-full flex-col overflow-hidden',
-        'border-white/10 bg-black/30 backdrop-blur-xl',
+        'border-pink-500/20 bg-black/40 backdrop-blur-xl shadow-2xl shadow-pink-500/10',
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-pink-500/10 to-blue-500/10 px-4 py-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">UX Tuning Panel</h2>
-          <p className="text-xs text-slate-400">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <span className="text-2xl">🎨</span>
+            UX Tuning Panel
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">
             Customize your component visually
           </p>
         </div>
@@ -116,26 +119,26 @@ export function TuningPanel({
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-2 border-b border-white/10 bg-black/20 px-4 py-2">
+      <div className="flex items-center gap-2 border-b border-white/10 bg-black/30 px-4 py-3">
         <Button
-          variant="ghost"
+          variant="glass"
           size="sm"
           onClick={tuning.undo}
           disabled={!tuning.canUndo}
           title="Undo (Ctrl+Z)"
-          className="text-slate-400 hover:text-white disabled:opacity-30"
+          className="text-slate-300 hover:text-white disabled:opacity-30"
         >
           <Undo className="mr-2 h-4 w-4" />
           Undo
         </Button>
         
         <Button
-          variant="ghost"
+          variant="glass"
           size="sm"
           onClick={tuning.redo}
           disabled={!tuning.canRedo}
           title="Redo (Ctrl+Shift+Z)"
-          className="text-slate-400 hover:text-white disabled:opacity-30"
+          className="text-slate-300 hover:text-white disabled:opacity-30"
         >
           <Redo className="mr-2 h-4 w-4" />
           Redo
@@ -144,7 +147,7 @@ export function TuningPanel({
         <div className="flex-1" />
         
         <Button
-          variant="ghost"
+          variant="glass"
           size="sm"
           onClick={() => {
             if (confirm('Reset all tuning changes?')) {
@@ -152,7 +155,7 @@ export function TuningPanel({
             }
           }}
           title="Reset all changes"
-          className="text-slate-400 hover:text-red-400"
+          className="text-slate-300 hover:text-red-400"
         >
           <RotateCcw className="mr-2 h-4 w-4" />
           Reset

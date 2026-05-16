@@ -75,7 +75,6 @@ const CardFooter = React.forwardRef<
 ));
 CardFooter.displayName = "CardFooter";
 
-// Glassmorphic Card Variant
 const GlassCard = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { glow?: "pink" | "blue" | "none" }
@@ -94,6 +93,14 @@ const GlassCard = React.forwardRef<
 ));
 GlassCard.displayName = "GlassCard";
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, GlassCard };
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  GlassCard,
+};
 
 // Made with Bob
