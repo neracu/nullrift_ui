@@ -40,7 +40,7 @@ Before you begin, ensure you have:
    ```bash
    WATSONX_API_KEY=your_actual_api_key_here
    WATSONX_PROJECT_ID=your_actual_project_id_here
-   WATSONX_MODEL_ID=ibm/granite-13b-chat-v2
+   WATSONX_MODEL_ID=ibm/granite-3-8b-instruct
    WATSONX_API_URL=https://us-south.ml.cloud.ibm.com
    ```
 
@@ -111,7 +111,7 @@ Expected response:
   "timestamp": "2024-01-01T00:00:00.000Z",
   "watsonx": {
     "configured": true,
-    "modelId": "ibm/granite-13b-chat-v2"
+    "modelId": "ibm/granite-3-8b-instruct"
   }
 }
 ```
@@ -124,9 +124,10 @@ NullRift UI supports various watsonx.ai models:
 
 | Model ID | Description | Best For |
 |----------|-------------|----------|
-| `ibm/granite-13b-chat-v2` | Default model | General component generation |
-| `ibm/granite-20b-code-instruct` | Code-focused | Complex components |
-| `meta-llama/llama-2-70b-chat` | Large model | Detailed schemas |
+| `ibm/granite-3-8b-instruct` | Default model (Recommended) | Fast, efficient component generation |
+| `ibm/granite-13b-chat-v2` | Chat model | Conversational component generation |
+| `ibm/granite-20b-code-instruct` | Code-focused | Complex components with detailed logic |
+| `meta-llama/llama-2-70b-chat` | Large model | Detailed schemas and complex requirements |
 
 To change the model, update `WATSONX_MODEL_ID` in `.env.local`.
 
