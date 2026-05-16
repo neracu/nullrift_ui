@@ -101,6 +101,11 @@ export function BuilderClient() {
   }, [phase]);
 
   const runGenerate = useCallback(async (prompt: string) => {
+    const hasExistingBuild =
+      generatedSchema != null &&
+      generatedCode.length > 0 &&
+      (phase === "success" || phase === "error");
+
     if (phase === "success" && tuningDirtyRef.current) {
       const proceed = window.confirm(
         "Regenerating replaces the current component and clears tuning history. Continue?"
@@ -111,8 +116,10 @@ export function BuilderClient() {
     setLastPrompt(prompt);
     setPhase("loading");
     setErrorState(null);
-    setGeneratedCode("");
-    setGeneratedSchema(null);
+    if (!hasExistingBuild) {
+      setGeneratedCode("");
+      setGeneratedSchema(null);
+    }
 
     try {
       const response = await fetch("/api/generate", {
@@ -173,7 +180,7 @@ export function BuilderClient() {
         description: "Check your connection and try again",
       });
     }
-  }, [phase]);
+  }, [phase, generatedSchema, generatedCode]);
 
   const handleRetry = useCallback(() => {
     if (lastPrompt) {
@@ -293,7 +300,11 @@ export function BuilderClient() {
             id={BUILDER_SECTION_IDS.generate}
             className="flex min-h-0 flex-1 flex-col scroll-mt-24 lg:scroll-mt-8"
           >
-            {phase !== "success" ? (
+            {!(
+              generatedSchema &&
+              generatedCode &&
+              phase !== "idle"
+            ) ? (
               <div
                 className={cn(
                   "flex w-full flex-col items-center px-0 py-8",
@@ -343,7 +354,12 @@ export function BuilderClient() {
               </div>
             ) : null}
 
-            <div className={cn("w-full space-y-6", phase !== "success" && "mt-8")}>
+            <div
+              className={cn(
+                "w-full space-y-6",
+                !(generatedSchema && generatedCode && phase !== "idle") && "mt-8"
+              )}
+            >
               <AnimatePresence mode="wait">
                 {phase === "error" && errorState && (
                   <motion.div
@@ -364,7 +380,9 @@ export function BuilderClient() {
                   </motion.div>
                 )}
 
-                {phase === "success" && generatedCode && generatedSchema && (
+                {generatedSchema &&
+                  generatedCode &&
+                  phase !== "idle" && (
                   <BuilderSuccessWorkspace
                     key={`workspace-${generationNonce}`}
                     generatedSchema={generatedSchema}
@@ -398,6 +416,7 @@ export function BuilderClient() {
         <AiAssistant
           ref={assistantRef}
           phase={phase}
+          isFollowUpBusy={phase === "loading" && Boolean(generatedSchema && generatedCode)}
           onRegenerate={() => lastPrompt && void runGenerate(lastPrompt)}
           onExport={() => setShowExportModal(true)}
           onFollowUpGenerate={(prompt) => void runGenerate(prompt)}

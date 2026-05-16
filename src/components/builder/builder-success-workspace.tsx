@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Eye, Settings } from 'lucide-react';
 import { toast } from 'sonner';
@@ -60,6 +60,9 @@ export function BuilderSuccessWorkspace({
     autoSave: true,
     storageKey: `nullrift-tuning-${generatedSchema.id}`,
   });
+
+  const previewSchema = useDeferredValue(tuning.currentSchema);
+  const previewCode = useDeferredValue(tuning.currentCode);
 
   const [canvasMode, setCanvasMode] = useState<PreviewCanvasMode>('interact');
   const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
@@ -206,8 +209,8 @@ export function BuilderSuccessWorkspace({
           <div className={cn(outputView === 'preview' ? 'block' : 'hidden')}>
             <div className="relative">
               <PreviewCanvas
-                schema={tuning.currentSchema}
-                code={tuning.currentCode}
+                schema={previewSchema}
+                code={previewCode}
                 canvasMode={canvasMode}
                 selectedFieldIds={selectedFieldIds}
                 onFieldCanvasSelect={onFieldCanvasSelect}

@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Code2, Loader2, Search, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,105 +11,27 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import {
+  GENERATION_STAGES,
+  useGenerationStageProgress,
+} from '@/lib/builder/generation-stages';
 
 interface GenerationLoadingProps {
   onCancel?: () => void;
 }
 
-type Stage = 'analyzing' | 'generating' | 'validating' | 'building';
-
-interface StageInfo {
-  id: Stage;
-  label: string;
-  icon: React.ReactNode;
-  description: string;
-  duration: number;
-}
-
-const STAGES: StageInfo[] = [
-  {
-    id: 'analyzing',
-    label: 'Analyzing prompt',
-    icon: <Search className="size-4" />,
-    description: 'Detecting structure and intent',
-    duration: 2000,
-  },
-  {
-    id: 'generating',
-    label: 'Generating schema',
-    icon: <Sparkles className="size-4" />,
-    description: 'Building the component model',
-    duration: 4000,
-  },
-  {
-    id: 'validating',
-    label: 'Validating',
-    icon: <CheckCircle2 className="size-4" />,
-    description: 'Checking schema quality',
-    duration: 1500,
-  },
-  {
-    id: 'building',
-    label: 'Writing code',
-    icon: <Code2 className="size-4" />,
-    description: 'Emitting React and types',
-    duration: 2500,
-  },
-];
-
 /**
- * Inline progress UI while the generate API runs: compact stages and a single progress track.
+ * Full-page style loading card while the generate API runs (initial build).
  */
 export function GenerationLoading({ onCancel }: GenerationLoadingProps) {
-  const [currentStage, setCurrentStage] = useState<Stage>('analyzing');
-  const [progress, setProgress] = useState(0);
-  const [elapsedTime, setElapsedTime] = useState(0);
-
-  const totalDuration = STAGES.reduce((sum, stage) => sum + stage.duration, 0);
-  const currentStageIndex = STAGES.findIndex((s) => s.id === currentStage);
-  const currentStageInfo = STAGES[currentStageIndex];
-
-  useEffect(() => {
-    const stageStartTime = Date.now();
-    let animationFrame: number;
-
-    const updateProgress = () => {
-      const elapsed = Date.now() - stageStartTime;
-      const previousStagesProgress = STAGES.slice(0, currentStageIndex).reduce(
-        (sum, stage) => sum + stage.duration,
-        0
-      );
-      const overallProgress =
-        ((previousStagesProgress + elapsed) / totalDuration) * 100;
-
-      setProgress(Math.min(overallProgress, 100));
-
-      if (elapsed < currentStageInfo.duration) {
-        animationFrame = requestAnimationFrame(updateProgress);
-      } else if (currentStageIndex < STAGES.length - 1) {
-        setCurrentStage(STAGES[currentStageIndex + 1].id);
-      }
-    };
-
-    animationFrame = requestAnimationFrame(updateProgress);
-
-    return () => {
-      if (animationFrame) cancelAnimationFrame(animationFrame);
-    };
-  }, [currentStage, currentStageIndex, currentStageInfo.duration, totalDuration]);
-
-  useEffect(() => {
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const estimatedTimeRemaining = Math.max(
-    0,
-    Math.ceil((totalDuration - (progress / 100) * totalDuration) / 1000)
-  );
+  const {
+    currentStage,
+    currentStageIndex,
+    currentStageInfo,
+    progress,
+    elapsedSeconds,
+    estimatedSecondsRemaining,
+  } = useGenerationStageProgress(true);
 
   return (
     <div className="w-full">
@@ -146,8 +67,8 @@ export function GenerationLoading({ onCancel }: GenerationLoadingProps) {
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground">{currentStageInfo.label}</p>
               <p className="text-xs text-muted-foreground">
-                {elapsedTime}s elapsed
-                {estimatedTimeRemaining > 0 ? ` · ~${estimatedTimeRemaining}s left` : null}
+                {elapsedSeconds}s elapsed
+                {estimatedSecondsRemaining > 0 ? ` · ~${estimatedSecondsRemaining}s left` : null}
               </p>
             </div>
           </div>
@@ -167,7 +88,7 @@ export function GenerationLoading({ onCancel }: GenerationLoadingProps) {
           </div>
 
           <ol className="space-y-1.5" aria-label="Generation steps">
-            {STAGES.map((stage, index) => {
+            {GENERATION_STAGES.map((stage, index) => {
               const isActive = stage.id === currentStage;
               const isComplete = index < currentStageIndex;
               const isPending = index > currentStageIndex;

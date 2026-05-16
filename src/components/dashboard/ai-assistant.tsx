@@ -18,11 +18,15 @@ import {
   RefreshCw,
   Download,
   MessageCircle,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import {
+  useGenerationStageProgress,
+} from '@/lib/builder/generation-stages';
 
 type AssistantState = 'minimized' | 'expanded';
 type BuilderPhase = 'idle' | 'loading' | 'error' | 'success';
@@ -37,6 +41,8 @@ export type AiAssistantHandle = {
 
 interface AiAssistantProps {
   phase?: BuilderPhase;
+  /** True when a follow-up generate is running while the last build stays on screen. */
+  isFollowUpBusy?: boolean;
   onRegenerate?: () => void;
   onExport?: () => void;
   /** After a successful build, sends a new natural-language prompt to run generate again. */
@@ -57,7 +63,7 @@ interface Suggestion {
  */
 export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
   function AiAssistant(
-    { phase = 'idle', onRegenerate, onExport, onFollowUpGenerate, className },
+    { phase = 'idle', isFollowUpBusy = false, onRegenerate, onExport, onFollowUpGenerate, className },
     ref
   ) {
     const [state, setState] = useState<AssistantState>('minimized');
@@ -84,6 +90,7 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
     );
 
     const submitFollowUp = useCallback(() => {
+      if (isFollowUpBusy) return;
       const trimmed = followUpDraft.trim();
       if (trimmed.length < FOLLOW_UP_PROMPT_MIN_LENGTH) {
         toast.error('Enter at least 10 characters', {
@@ -93,12 +100,12 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
       }
       onFollowUpGenerate?.(trimmed);
       setFollowUpDraft('');
-    }, [followUpDraft, onFollowUpGenerate]);
+    }, [followUpDraft, onFollowUpGenerate, isFollowUpBusy]);
 
     const onFollowUpKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        submitFollowUp();
+        if (!isFollowUpBusy) submitFollowUp();
       }
     };
 
@@ -173,6 +180,7 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
     };
 
     const suggestions = getSuggestions();
+    const stageProgress = useGenerationStageProgress(isFollowUpBusy);
 
     return (
       <div className={cn('fixed bottom-6 right-6 z-50', className)}>
@@ -257,12 +265,16 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
                     <motion.button
                       key={suggestion.id}
                       type="button"
+                      disabled={Boolean(suggestion.action && phase === 'loading')}
                       whileHover={{ scale: 1.02, x: 4 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => suggestion.action?.()}
                       className={cn(
                         'w-full rounded-lg border border-white/10 bg-white/5 p-3 text-left transition-all hover:bg-white/10',
-                        suggestion.action && 'cursor-pointer'
+                        suggestion.action && 'cursor-pointer',
+                        suggestion.action &&
+                          phase === 'loading' &&
+                          'pointer-events-none cursor-not-allowed opacity-50'
                       )}
                     >
                       <div className="flex items-start gap-3">
@@ -280,9 +292,31 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
               </div>
 
               <div className="border-t border-white/10 p-4">
-                {phase === 'success' && onFollowUpGenerate ? (
+                {(phase === 'success' || isFollowUpBusy) && onFollowUpGenerate ? (
                   <div className="space-y-3">
-                    <p className="text-xs font-medium text-slate-300">Next generation</p>
+                    {isFollowUpBusy ? (
+                      <div className="space-y-2" aria-live="polite" aria-busy="true">
+                        <div className="h-0.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                          <motion.div
+                            className="h-full rounded-full bg-white/35"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min(stageProgress.progress, 100)}%` }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                          />
+                        </div>
+                        <div className="flex items-baseline justify-between gap-3 px-0.5">
+                          <span className="min-w-0 truncate text-xs font-medium tracking-tight text-slate-200">
+                            {stageProgress.currentStageInfo.label}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-[10px] text-slate-500">
+                            {stageProgress.elapsedSeconds}s
+                            {stageProgress.estimatedSecondsRemaining > 0
+                              ? ` · ~${stageProgress.estimatedSecondsRemaining}s`
+                              : null}
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
                     <Textarea
                       ref={followUpRef}
                       value={followUpDraft}
@@ -294,19 +328,36 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
                       onKeyDown={onFollowUpKeyDown}
                       placeholder="Describe the next version or changes you want…"
                       rows={3}
+                      disabled={isFollowUpBusy}
                       className={cn(
                         'resize-none border-white/15 bg-white/5 text-sm text-white',
                         'placeholder:text-slate-500',
-                        'focus-visible:ring-1 focus-visible:ring-white/30'
+                        'focus-visible:ring-1 focus-visible:ring-white/30',
+                        isFollowUpBusy && 'cursor-wait opacity-70'
                       )}
                     />
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-slate-500">
                         {followUpDraft.length} / {FOLLOW_UP_PROMPT_MAX_LENGTH}
                       </span>
-                      <Button type="button" size="sm" onClick={submitFollowUp} className="gap-1.5">
-                        <Sparkles className="size-3.5" />
-                        Generate
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={submitFollowUp}
+                        disabled={isFollowUpBusy}
+                        className="gap-1.5"
+                      >
+                        {isFollowUpBusy ? (
+                          <>
+                            <Loader2 className="size-3.5 animate-spin" />
+                            Generating
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="size-3.5" />
+                            Generate
+                          </>
+                        )}
                       </Button>
                     </div>
                     <p className="text-[11px] leading-snug text-slate-500">
