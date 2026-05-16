@@ -349,7 +349,7 @@ export const THEME_STYLES = {
  */
 export const DEFAULT_PREVIEW_STATE: PreviewState = {
   mode: 'schema',
-  viewport: 'desktop',
+  viewport: 'full',
   theme: 'dark',
   zoom: 100,
   formData: {},

@@ -6,7 +6,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Eye, Settings } from 'lucide-react';
+import { Copy, Eye, Settings, BookmarkPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -86,6 +86,7 @@ export interface BuilderSuccessWorkspaceProps {
   onTuningDirtyChange: (dirty: boolean) => void;
   onCopyCode: (text?: string) => void;
   currentCode: string;
+  onSaveToLibrary?: () => void;
 }
 
 /**
@@ -103,6 +104,7 @@ export function BuilderSuccessWorkspace({
   onTuningDirtyChange,
   onCopyCode,
   currentCode,
+  onSaveToLibrary,
 }: BuilderSuccessWorkspaceProps) {
   const tuning = useTuning(generatedSchema, generatedCode, {
     onSchemaChange,
@@ -315,16 +317,24 @@ export function BuilderSuccessWorkspace({
             <CodeJsxGlyphIcon className="size-4" />
           </Button>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onToggleTuning}
-          className="gap-2 self-end sm:self-auto"
-        >
-          <Settings className="h-4 w-4" />
-          {showTuningPanel ? 'Hide' : 'Show'} tuning
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2 self-end sm:self-auto">
+          {onSaveToLibrary ? (
+            <Button type="button" variant="outline" size="sm" className="gap-2" onClick={onSaveToLibrary}>
+              <BookmarkPlus className="h-4 w-4" />
+              Save to library
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onToggleTuning}
+            className="gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            {showTuningPanel ? 'Hide' : 'Show'} tuning
+          </Button>
+        </div>
       </div>
 
       <div className={`grid gap-6 ${showTuningPanel ? 'lg:grid-cols-[1fr_380px]' : 'grid-cols-1'}`}>

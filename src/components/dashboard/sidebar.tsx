@@ -31,7 +31,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
@@ -58,16 +57,11 @@ interface SidebarProps extends BuilderSidebarActions {
 const tipWorkspace = formatShortcut({ key: 'k', ctrl: true });
 const tipExport = formatShortcut({ key: 'e', ctrl: true });
 
-const navIconClass = 'size-4 shrink-0 stroke-[1.5]';
-const navButtonCollapsedClass =
-  'group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0';
-const navGroupIconModeClass = 'group-data-[collapsible=icon]:items-center';
-const navMenuIconModeClass =
-  'group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:min-w-0 group-data-[collapsible=icon]:self-center';
-const navItemIconModeClass =
-  'group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:self-center';
-const navGroupContentIconModeClass =
-  'group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:self-center';
+const navIconClass = 'size-5 shrink-0 stroke-[1.5]';
+const navGroupIconModeClass = '';
+const navMenuIconModeClass = 'w-full min-w-0';
+const navItemIconModeClass = 'w-full min-w-0';
+const navGroupContentIconModeClass = 'w-full min-w-0';
 
 /**
  * Builder collapsible rail: shadcn Sidebar (icon/offcanvas), nav actions, profile dropdown.
@@ -90,13 +84,13 @@ export function Sidebar({
   return (
     <ShadcnSidebar collapsible="icon" variant="sidebar" className={cn('border-sidebar-border', className)}>
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+        <div className="flex items-center gap-2 px-2 py-2">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <Sparkles className={navIconClass} />
           </div>
-          <div className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-semibold">{BUILDER_LABELS.brandTitle}</p>
-            <p className="truncate text-xs text-sidebar-foreground/70">{BUILDER_LABELS.brandSubtitle}</p>
+          <div className="min-w-0 flex-1 leading-tight transition-[opacity,max-width] duration-200 ease-linear motion-reduce:transition-none group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:overflow-hidden group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:flex-none">
+            <p className="truncate text-base font-semibold">{BUILDER_LABELS.brandTitle}</p>
+            <p className="truncate text-sm text-sidebar-foreground/70">{BUILDER_LABELS.brandSubtitle}</p>
           </div>
         </div>
       </SidebarHeader>
@@ -109,7 +103,6 @@ export function Sidebar({
               <SidebarMenuItem className={navItemIconModeClass}>
                 <SidebarMenuButton
                   type="button"
-                  className={navButtonCollapsedClass}
                   onClick={() => run(onWorkspace)}
                   tooltip={{ children: `Workspace (${tipWorkspace})` }}
                 >
@@ -120,7 +113,6 @@ export function Sidebar({
               <SidebarMenuItem className={navItemIconModeClass}>
                 <SidebarMenuButton
                   type="button"
-                  className={navButtonCollapsedClass}
                   onClick={() => run(onLibrary)}
                   tooltip="Library"
                 >
@@ -131,7 +123,6 @@ export function Sidebar({
               <SidebarMenuItem className={navItemIconModeClass}>
                 <SidebarMenuButton
                   type="button"
-                  className={navButtonCollapsedClass}
                   onClick={() => run(onExport)}
                   tooltip={{ children: `Export (${tipExport})` }}
                 >
@@ -144,32 +135,24 @@ export function Sidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter
-        className={cn(
-          'border-t border-sidebar-border',
-          'group-data-[collapsible=icon]:items-center'
-        )}
-      >
+      <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu className={navMenuIconModeClass}>
           <SidebarMenuItem className={navItemIconModeClass}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className={cn(
-                    'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
-                    navButtonCollapsedClass
-                  )}
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   tooltip="Account"
                 >
-                  <Avatar className="size-8 rounded-lg">
-                    <AvatarFallback className="rounded-lg bg-sidebar-primary text-xs text-sidebar-primary-foreground">
+                  <Avatar className="size-9 rounded-lg">
+                    <AvatarFallback className="rounded-lg bg-sidebar-primary text-sm text-sidebar-primary-foreground">
                       U
                     </AvatarFallback>
                   </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
+                  <div className="grid flex-1 text-left text-base leading-tight">
                     <span className="truncate font-semibold">User</span>
-                    <span className="truncate text-xs text-sidebar-foreground/70">Free plan</span>
+                    <span className="truncate text-sm text-sidebar-foreground/70">Free plan</span>
                   </div>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
@@ -181,46 +164,46 @@ export function Sidebar({
               >
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">User</p>
-                    <p className="text-xs leading-none text-muted-foreground">you@example.com</p>
+                    <p className="text-base font-medium leading-none">User</p>
+                    <p className="text-sm leading-none text-muted-foreground">you@example.com</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/login" className="cursor-pointer">
-                    <User className="mr-2 size-4" />
+                  <Link href="/login" className="cursor-pointer text-base">
+                    <User className="mr-2 size-5" />
                     Profile
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="cursor-pointer"
+                  className="cursor-pointer text-base"
                   onClick={() => {
                     onSettings();
                   }}
                 >
-                  <Keyboard className="mr-2 size-4" />
+                  <Keyboard className="mr-2 size-5" />
                   {BUILDER_LABELS.settings}
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={BUILDER_HELP_HREF} className="cursor-pointer">
-                    <HelpCircle className="mr-2 size-4" />
+                  <Link href={BUILDER_HELP_HREF} className="cursor-pointer text-base">
+                    <HelpCircle className="mr-2 size-5" />
                     {BUILDER_LABELS.help}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={BUILDER_HOME_HREF} className="cursor-pointer">
-                    <Home className="mr-2 size-4" />
+                  <Link href={BUILDER_HOME_HREF} className="cursor-pointer text-base">
+                    <Home className="mr-2 size-5" />
                     {BUILDER_LABELS.home}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="cursor-pointer text-destructive focus:text-destructive"
+                  className="cursor-pointer text-base text-destructive focus:text-destructive"
                   onClick={() => {
                     handleSignOut();
                   }}
                 >
-                  <LogOut className="mr-2 size-4" />
+                  <LogOut className="mr-2 size-5" />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>

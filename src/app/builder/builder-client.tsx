@@ -39,6 +39,9 @@ import {
 } from "@/lib/builder-nav";
 import { cn } from "@/lib/utils";
 import type { ComponentSchema } from "@/lib/watsonx/types";
+import { useComponentLibrary } from "@/hooks/use-component-library";
+import { ComponentLibraryPanel } from "@/components/builder/component-library-panel";
+import type { LibraryEntry } from "@/lib/library/component-library";
 
 type BuilderPhase = "idle" | "loading" | "error" | "success";
 
@@ -93,6 +96,7 @@ export function BuilderClient() {
   const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const assistantRef = useRef<AiAssistantHandle>(null);
   const tuningDirtyRef = useRef(false);
+  const { entries: libraryEntries, saveFromBuilder, removeEntry } = useComponentLibrary();
 
   useEffect(() => {
     if (phase === "success") {
@@ -212,6 +216,23 @@ export function BuilderClient() {
     setLibrarySheetOpen(true);
   }, []);
 
+  const handleLibraryLoad = useCallback((entry: LibraryEntry) => {
+    const schema = structuredClone(entry.schema) as ComponentSchema;
+    setGeneratedCode(entry.code);
+    setGeneratedSchema(schema);
+    setCurrentSchema(schema);
+    setCurrentCode(entry.code);
+    if (entry.sourcePrompt?.trim()) {
+      setLastPrompt(entry.sourcePrompt.trim());
+    }
+    setShowTuningPanel(false);
+    tuningDirtyRef.current = false;
+    setPhase("success");
+    setGenerationNonce((n) => n + 1);
+    setLibrarySheetOpen(false);
+    toast.success("Loaded from library", { description: schema.name });
+  }, []);
+
   const handleSidebarExport = useCallback(() => {
     if (currentSchema && phase === "success") {
       setShowExportModal(true);
@@ -251,6 +272,8 @@ export function BuilderClient() {
             setShowTuningPanel(false);
           } else if (shortcutsModalOpen) {
             setShortcutsModalOpen(false);
+          } else if (librarySheetOpen) {
+            setLibrarySheetOpen(false);
           }
         },
         description: "Close modal or panel",
@@ -281,11 +304,13 @@ export function BuilderClient() {
             <SheetTitle>Library</SheetTitle>
             <SheetDescription>Saved components will appear here.</SheetDescription>
           </SheetHeader>
-          <div className="mt-6 flex-1">
-            <p className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
-              No saved components yet. Generate from the prompt in the main view, then we&apos;ll
-              add persistence here.
-            </p>
+          <div className="mt-2 flex min-h-0 flex-1 flex-col">
+            <ComponentLibraryPanel
+              entries={libraryEntries}
+              onLoad={handleLibraryLoad}
+              onRemove={removeEntry}
+              className="max-h-[min(520px,calc(100svh-10rem))]"
+            />
           </div>
         </SheetContent>
       </Sheet>
@@ -402,6 +427,22 @@ export function BuilderClient() {
                     }}
                     onCopyCode={handleCopyCode}
                     currentCode={currentCode}
+                    onSaveToLibrary={
+                      phase === "success" && currentSchema && currentCode.trim()
+                        ? () => {
+                            const saved = saveFromBuilder({
+                              schema: currentSchema,
+                              code: currentCode,
+                              sourcePrompt: lastPrompt.trim() || undefined,
+                            });
+                            if (saved) {
+                              toast.success("Saved to library", {
+                                description: saved.schema.name,
+                              });
+                            }
+                          }
+                        : undefined
+                    }
                   />
                 )}
               </AnimatePresence>

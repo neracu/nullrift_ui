@@ -7,6 +7,7 @@
 
 import type { ComponentSchema, FieldDefinition } from '../watsonx/types';
 import type { PreviewState, StateChangeListener, ValidationResult } from './types';
+import { DEFAULT_PREVIEW_STATE } from './types';
 import { resolveValidationConfig } from '@/lib/tuning/behavior-schema';
 
 /**
@@ -35,19 +36,6 @@ export class PreviewStateManager {
    * Initialize state with defaults and initial values
    */
   private initializeState(initialState?: Partial<PreviewState>): PreviewState {
-    const defaultState: PreviewState = {
-      mode: 'schema',
-      viewport: 'desktop',
-      theme: 'dark',
-      zoom: 100,
-      formData: {},
-      errors: {},
-      isInteractive: true,
-      isLoading: false,
-      error: null
-    };
-
-    // Initialize form data with default values from schema
     const formData: Record<string, any> = {};
     for (const field of this.schema.fields) {
       if (field.type === 'checkbox') {
@@ -60,7 +48,7 @@ export class PreviewStateManager {
     }
 
     return {
-      ...defaultState,
+      ...DEFAULT_PREVIEW_STATE,
       ...initialState,
       formData: {
         ...formData,

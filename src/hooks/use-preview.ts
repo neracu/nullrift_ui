@@ -294,7 +294,7 @@ export function usePreview(
  * 
  * Simplified hook for preview controls (viewport, theme, zoom)
  */
-export function usePreviewControls(initialViewport: ViewportSize = 'desktop') {
+export function usePreviewControls(initialViewport: ViewportSize = 'full') {
   const [viewport, setViewport] = useState<ViewportSize>(initialViewport);
   const [theme, setTheme] = useState<PreviewTheme>('dark');
   const [zoom, setZoom] = useState<number>(100);
