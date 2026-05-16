@@ -70,11 +70,34 @@ export interface StyleOverrides {
 }
 
 /**
+ * One added field plus optional insert index in the field list (0-based).
+ * Omit `insertAt` or set to `fields.length` semantics to append.
+ */
+export interface FieldAdditionEntry {
+  field: FieldDefinition;
+  /** 0-based index in the field list at insert time. */
+  insertAt?: number;
+  /** Insert immediately after this field id (stable on replay). */
+  insertAfterFieldId?: string;
+}
+
+/** Coerce persisted / legacy `fieldsAdded` arrays into `{ field, insertAt? }[]`. */
+export function normalizeFieldAdditionEntries(raw: unknown): FieldAdditionEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => {
+    if (item && typeof item === 'object' && 'field' in item && (item as FieldAdditionEntry).field) {
+      return item as FieldAdditionEntry;
+    }
+    return { field: item as FieldDefinition };
+  });
+}
+
+/**
  * Structure modification tracking
  */
 export interface StructureChanges {
-  /** Fields that have been added */
-  fieldsAdded: FieldDefinition[];
+  /** Fields that have been added (with optional insert position) */
+  fieldsAdded: FieldAdditionEntry[];
   
   /** IDs of fields that have been removed */
   fieldsRemoved: string[];
@@ -243,8 +266,11 @@ export interface UseTuningReturn {
   resetStyles: () => void;
   
   // Structure operations
-  /** Add a new field */
-  addField: (field: FieldDefinition, position?: number) => void;
+  /** Add a new field (optional insert index or insert after field id) */
+  addField: (
+    field: FieldDefinition,
+    options?: { insertAt?: number; insertAfterFieldId?: string }
+  ) => void;
 
   /** Remove a field */
   removeField: (fieldId: string) => void;

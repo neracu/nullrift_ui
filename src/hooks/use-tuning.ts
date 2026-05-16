@@ -16,10 +16,13 @@ import type {
   HistoryEntry,
   UseTuningOptions,
   UseTuningReturn,
+  FieldAdditionEntry,
 } from '@/types/tuning';
-import { DEFAULT_TUNING_STATE } from '@/types/tuning';
+import { DEFAULT_TUNING_STATE, normalizeFieldAdditionEntries } from '@/types/tuning';
 import { StyleTransformer } from '@/lib/tuning/style-transformer';
 import { StructureEditor } from '@/lib/tuning/structure-editor';
+import { mergeFieldPartial } from '@/lib/tuning/merge-field-partial';
+import { reconcileFieldOrderWithSchema, resolveFieldInsertIndex } from '@/lib/tuning/field-insert';
 
 /**
  * useTuning Hook
@@ -45,22 +48,50 @@ export function useTuning(
   const styleTransformer = useMemo(() => new StyleTransformer(), []);
   const structureEditor = useMemo(() => new StructureEditor(), []);
 
+  const normalizeTuningStateShape = useCallback((s: TuningState): TuningState => {
+    return {
+      ...s,
+      structureChanges: {
+        ...DEFAULT_TUNING_STATE.structureChanges,
+        ...s.structureChanges,
+        fieldsAdded: normalizeFieldAdditionEntries(s.structureChanges?.fieldsAdded),
+      },
+    };
+  }, []);
+
   // Initialize state
   const [state, setState] = useState<TuningState>(() => {
-    const baseState = {
+    const baseState = normalizeTuningStateShape({
       ...DEFAULT_TUNING_STATE,
       componentId: initialSchema.id,
       ...initialState,
-    };
+      structureChanges: {
+        ...DEFAULT_TUNING_STATE.structureChanges,
+        ...initialState?.structureChanges,
+        fieldsAdded: normalizeFieldAdditionEntries(
+          initialState?.structureChanges?.fieldsAdded ?? DEFAULT_TUNING_STATE.structureChanges.fieldsAdded
+        ),
+      },
+    });
 
     // Try to load from localStorage if autoSave is enabled
     if (autoSave && typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem(storageKey);
         if (saved) {
-          const parsed = JSON.parse(saved);
+          const parsed = JSON.parse(saved) as Partial<TuningState>;
           if (parsed.componentId === initialSchema.id) {
-            return { ...baseState, ...parsed };
+            return normalizeTuningStateShape({
+              ...baseState,
+              ...parsed,
+              structureChanges: {
+                ...baseState.structureChanges,
+                ...parsed.structureChanges,
+                fieldsAdded: normalizeFieldAdditionEntries(
+                  parsed.structureChanges?.fieldsAdded ?? baseState.structureChanges.fieldsAdded
+                ),
+              },
+            });
           }
         }
       } catch (error) {
@@ -150,9 +181,12 @@ export function useTuning(
       const { structureChanges } = newState;
 
       // Apply field additions
-      structureChanges.fieldsAdded.forEach((field) => {
+      const additions = normalizeFieldAdditionEntries(structureChanges.fieldsAdded);
+      additions.forEach((entry) => {
+        const { field } = entry;
         if (!structureEditor.hasField(updatedSchema, field.id)) {
-          updatedSchema = structureEditor.addField(updatedSchema, field);
+          const pos = resolveFieldInsertIndex(updatedSchema, entry);
+          updatedSchema = structureEditor.addField(updatedSchema, field, pos);
         }
       });
 
@@ -170,12 +204,15 @@ export function useTuning(
         }
       });
 
-      // Apply field reordering
+      // Apply field reordering (reconcile if stale vs adds/removes)
       if (structureChanges.fieldsReordered.length > 0) {
-        updatedSchema = structureEditor.reorderFields(
+        const mergedOrder = reconcileFieldOrderWithSchema(
           updatedSchema,
           structureChanges.fieldsReordered
         );
+        if (mergedOrder) {
+          updatedSchema = structureEditor.reorderFields(updatedSchema, mergedOrder);
+        }
       }
 
       // Apply layout change
@@ -245,13 +282,22 @@ export function useTuning(
    * Add a new field
    */
   const addField = useCallback(
-    (field: FieldDefinition, position?: number) => {
+    (
+      field: FieldDefinition,
+      options?: { insertAt?: number; insertAfterFieldId?: string }
+    ) => {
+      const entry: FieldAdditionEntry = {
+        field,
+        insertAt: options?.insertAt,
+        insertAfterFieldId: options?.insertAfterFieldId,
+      };
+
       addToHistory({
         type: 'structure',
         changes: {
           structureChanges: {
             ...state.structureChanges,
-            fieldsAdded: [...state.structureChanges.fieldsAdded, field],
+            fieldsAdded: [...state.structureChanges.fieldsAdded, entry],
           },
         },
         description: `Added field: ${field.label}`,
@@ -261,7 +307,7 @@ export function useTuning(
         ...state,
         structureChanges: {
           ...state.structureChanges,
-          fieldsAdded: [...state.structureChanges.fieldsAdded, field],
+          fieldsAdded: [...state.structureChanges.fieldsAdded, entry],
         },
       };
 
@@ -342,15 +388,19 @@ export function useTuning(
    */
   const duplicateFields = useCallback(
     (fieldIds: string[]) => {
-      const additions: FieldDefinition[] = [];
-      for (let i = 0; i < fieldIds.length; i++) {
-        const id = fieldIds[i];
+      const uniqueSorted = [...new Set(fieldIds)].filter(Boolean).sort(
+        (a, b) =>
+          currentSchema.fields.findIndex((f) => f.id === a) -
+          currentSchema.fields.findIndex((f) => f.id === b)
+      );
+      const additions: FieldAdditionEntry[] = [];
+      for (const id of uniqueSorted) {
         const src = currentSchema.fields.find((f) => f.id === id);
         if (!src) continue;
         const copy = JSON.parse(JSON.stringify(src)) as FieldDefinition;
-        copy.id = `field_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
+        copy.id = `field_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
         copy.label = `${src.label} (copy)`;
-        additions.push(copy);
+        additions.push({ field: copy, insertAfterFieldId: id });
       }
       if (additions.length === 0) return;
 
@@ -414,6 +464,11 @@ export function useTuning(
    */
   const modifyField = useCallback(
     (fieldId: string, changes: Partial<FieldDefinition>) => {
+      const merged = mergeFieldPartial(
+        state.structureChanges.fieldsModified[fieldId],
+        changes
+      );
+
       addToHistory({
         type: 'structure',
         changes: {
@@ -421,7 +476,7 @@ export function useTuning(
             ...state.structureChanges,
             fieldsModified: {
               ...state.structureChanges.fieldsModified,
-              [fieldId]: changes,
+              [fieldId]: merged,
             },
           },
         },
@@ -434,7 +489,7 @@ export function useTuning(
           ...state.structureChanges,
           fieldsModified: {
             ...state.structureChanges.fieldsModified,
-            [fieldId]: changes,
+            [fieldId]: merged,
           },
         },
       };
@@ -509,16 +564,16 @@ export function useTuning(
     const entry = state.history[newIndex];
 
     if (entry.previousState) {
-      const newState = {
+      const newState = normalizeTuningStateShape({
         ...state,
         ...entry.previousState,
         historyIndex: newIndex,
-      };
+      });
 
       setState(newState);
       applyChanges(newState);
     }
-  }, [state, applyChanges]);
+  }, [state, applyChanges, normalizeTuningStateShape]);
 
   /**
    * Redo last undone change
@@ -529,15 +584,15 @@ export function useTuning(
     const newIndex = state.historyIndex + 1;
     const entry = state.history[newIndex];
 
-    const newState = {
+    const newState = normalizeTuningStateShape({
       ...state,
       ...entry.changes,
       historyIndex: newIndex,
-    };
+    });
 
     setState(newState);
     applyChanges(newState);
-  }, [state, applyChanges]);
+  }, [state, applyChanges, normalizeTuningStateShape]);
 
   /**
    * Clear history
@@ -576,16 +631,25 @@ export function useTuning(
    */
   const importConfig = useCallback(
     (config: Partial<TuningState>) => {
-      const newState = {
+      const merged: TuningState = {
         ...state,
         ...config,
         componentId: initialSchema.id,
+        structureChanges: {
+          ...state.structureChanges,
+          ...config.structureChanges,
+          fieldsAdded: normalizeFieldAdditionEntries(
+            config.structureChanges?.fieldsAdded ?? state.structureChanges.fieldsAdded
+          ),
+        },
       };
+
+      const newState = normalizeTuningStateShape(merged);
 
       setState(newState);
       applyChanges(newState);
     },
-    [state, initialSchema, applyChanges]
+    [state, initialSchema, applyChanges, normalizeTuningStateShape]
   );
 
   const isDirty = state.history.length > 0;

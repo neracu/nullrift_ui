@@ -291,6 +291,7 @@ export function BuilderSuccessWorkspace({
               <TuningPanel
                 tuning={tuning}
                 highlightedFieldIds={canvasMode === 'design' ? selectedFieldIds : []}
+                onFieldSelectionChange={setSelectedFieldIds}
                 onClose={() => onToggleTuning()}
               />
             </motion.div>

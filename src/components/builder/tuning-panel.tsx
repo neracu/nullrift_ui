@@ -47,6 +47,9 @@ export interface TuningPanelProps {
   /** Field ids selected on the design canvas — scroll/highlight in Structure. */
   highlightedFieldIds?: string[];
 
+  /** When user selects a field in the Structure list (sync with canvas selection). */
+  onFieldSelectionChange?: (fieldIds: string[]) => void;
+
   /** Callback when panel is closed */
   onClose?: () => void;
 
@@ -66,6 +69,7 @@ export interface TuningPanelProps {
 export function TuningPanel({
   tuning,
   highlightedFieldIds = [],
+  onFieldSelectionChange,
   onClose,
   className,
   classNames,
@@ -200,11 +204,13 @@ export function TuningPanel({
             <StructureControls
               schema={tuning.currentSchema}
               highlightedFieldIds={highlightedFieldIds}
+              onFieldSelectionChange={onFieldSelectionChange}
               onAddField={tuning.addField}
               onRemoveField={tuning.removeField}
               onReorderFields={tuning.reorderFields}
               onModifyField={tuning.modifyField}
               onLayoutChange={tuning.changeLayout}
+              onDuplicateFields={tuning.duplicateFields}
             />
           </TuningSection>
         )}

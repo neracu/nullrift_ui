@@ -8,6 +8,9 @@
 import JSZip from 'jszip';
 import type { ComponentSchema } from '@/lib/watsonx/types';
 import type { TuningState } from '@/types/tuning';
+import { normalizeFieldAdditionEntries } from '@/types/tuning';
+import { StructureEditor } from '@/lib/tuning/structure-editor';
+import { reconcileFieldOrderWithSchema, resolveFieldInsertIndex } from '@/lib/tuning/field-insert';
 import type {
   ExportRequest,
   ExportResponse,
@@ -172,41 +175,43 @@ export class ExportManager {
 
     // Apply structure changes
     if (structureChanges) {
-      // Add new fields
-      if (structureChanges.fieldsAdded.length > 0) {
-        tunedSchema.fields = [...tunedSchema.fields, ...structureChanges.fieldsAdded];
-      }
+      const structureEditor = new StructureEditor();
+      let working: ComponentSchema = tunedSchema;
 
-      // Remove fields
-      if (structureChanges.fieldsRemoved.length > 0) {
-        tunedSchema.fields = tunedSchema.fields.filter(
-          field => !structureChanges.fieldsRemoved.includes(field.id)
-        );
-      }
-
-      // Reorder fields
-      if (structureChanges.fieldsReordered.length > 0) {
-        const fieldMap = new Map(tunedSchema.fields.map(f => [f.id, f]));
-        tunedSchema.fields = structureChanges.fieldsReordered
-          .map(id => fieldMap.get(id))
-          .filter(Boolean) as typeof tunedSchema.fields;
-      }
-
-      // Modify fields
-      Object.entries(structureChanges.fieldsModified).forEach(([fieldId, changes]) => {
-        const fieldIndex = tunedSchema.fields.findIndex(f => f.id === fieldId);
-        if (fieldIndex !== -1) {
-          tunedSchema.fields[fieldIndex] = {
-            ...tunedSchema.fields[fieldIndex],
-            ...changes,
-          };
+      const additions = normalizeFieldAdditionEntries(structureChanges.fieldsAdded);
+      additions.forEach((entry) => {
+        const { field } = entry;
+        if (!structureEditor.hasField(working, field.id)) {
+          const pos = resolveFieldInsertIndex(working, entry);
+          working = structureEditor.addField(working, field, pos);
         }
       });
 
-      // Change layout
-      if (structureChanges.layoutChanged) {
-        tunedSchema.layout = structureChanges.layoutChanged;
+      structureChanges.fieldsRemoved.forEach((fieldId) => {
+        if (structureEditor.hasField(working, fieldId)) {
+          working = structureEditor.removeField(working, fieldId);
+        }
+      });
+
+      Object.entries(structureChanges.fieldsModified).forEach(([fieldId, changes]) => {
+        if (structureEditor.hasField(working, fieldId)) {
+          working = structureEditor.modifyField(working, fieldId, changes);
+        }
+      });
+
+      if (structureChanges.fieldsReordered.length > 0) {
+        const mergedOrder = reconcileFieldOrderWithSchema(working, structureChanges.fieldsReordered);
+        if (mergedOrder) {
+          working = structureEditor.reorderFields(working, mergedOrder);
+        }
       }
+
+      if (structureChanges.layoutChanged) {
+        working = structureEditor.changeLayout(working, structureChanges.layoutChanged);
+      }
+
+      tunedSchema.fields = working.fields;
+      tunedSchema.layout = working.layout;
     }
 
     // Apply behavior settings
