@@ -26,6 +26,12 @@ export function PreviewCanvas({
   onStateChange,
   onError,
   onSubmit,
+  canvasMode = 'interact',
+  selectedFieldIds = [],
+  onFieldCanvasSelect,
+  onCanvasReorder,
+  onCycleFieldColSpan,
+  onCanvasModeChange,
 }: PreviewProps) {
   const preview = usePreview(schema, {
     initialState,
@@ -54,6 +60,8 @@ export function PreviewCanvas({
             onThemeChange={preview.setTheme}
             onZoomChange={preview.setZoom}
             onReset={preview.reset}
+            canvasMode={canvasMode}
+            onCanvasModeChange={onCanvasModeChange}
           />
         </div>
       </div>
@@ -71,6 +79,11 @@ export function PreviewCanvas({
           onFieldChange={preview.updateField}
           onSubmit={preview.submit}
           onError={onError}
+          canvasMode={canvasMode}
+          selectedFieldIds={selectedFieldIds}
+          onFieldCanvasSelect={onFieldCanvasSelect}
+          onCanvasReorder={onCanvasReorder}
+          onCycleFieldColSpan={onCycleFieldColSpan}
         />
       </div>
     </Card>

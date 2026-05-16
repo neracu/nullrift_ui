@@ -242,10 +242,19 @@ export interface UseTuningReturn {
   // Structure operations
   /** Add a new field */
   addField: (field: FieldDefinition, position?: number) => void;
-  
+
   /** Remove a field */
   removeField: (fieldId: string) => void;
-  
+
+  /** Remove several fields in one history step */
+  removeFields: (fieldIds: string[]) => void;
+
+  /** Duplicate fields (appended) in one history step */
+  duplicateFields: (fieldIds: string[]) => void;
+
+  /** True after any tuning change (history non-empty) */
+  isDirty: boolean;
+
   /** Reorder fields */
   reorderFields: (newOrder: string[]) => void;
   

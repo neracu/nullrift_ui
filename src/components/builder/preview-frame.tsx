@@ -26,7 +26,12 @@ export function PreviewFrame({
   onFieldChange,
   onSubmit,
   onReady,
-  onError
+  onError,
+  canvasMode = 'interact',
+  selectedFieldIds = [],
+  onFieldCanvasSelect,
+  onCanvasReorder,
+  onCycleFieldColSpan,
 }: PreviewFrameProps) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -120,6 +125,11 @@ export function PreviewFrame({
               theme={state.theme}
               onFieldChange={onFieldChange}
               onSubmit={handleSubmit}
+              canvasMode={canvasMode}
+              selectedFieldIds={selectedFieldIds}
+              onFieldCanvasSelect={onFieldCanvasSelect}
+              onCanvasReorder={onCanvasReorder}
+              onCycleFieldColSpan={onCycleFieldColSpan}
             />
           </div>
         </div>

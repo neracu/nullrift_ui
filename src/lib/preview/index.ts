@@ -8,6 +8,7 @@
 export type {
   ViewportSize,
   PreviewTheme,
+  PreviewCanvasMode,
   RenderMode,
   ViewportConfig,
   PreviewState,

@@ -1,6 +1,6 @@
 /**
  * Tuning Panel Component
- * 
+ *
  * Main panel for customizing generated components with style, structure,
  * and behavior controls. Includes undo/redo functionality.
  */
@@ -15,26 +15,19 @@ import { TuningSection } from './tuning-section';
 import { StyleControls } from './style-controls';
 import { StructureControls } from './structure-controls';
 import { BehaviorControls } from './behavior-controls';
-import { useTuning } from '@/hooks/use-tuning';
-import type { ComponentSchema } from '@/lib/watsonx/types';
+import type { UseTuningReturn } from '@/types/tuning';
 import { cn } from '@/lib/utils';
 
 export interface TuningPanelProps {
-  /** Initial component schema */
-  schema: ComponentSchema;
-  
-  /** Initial generated code */
-  code: string;
-  
-  /** Callback when schema changes */
-  onSchemaChange?: (schema: ComponentSchema) => void;
-  
-  /** Callback when code changes */
-  onCodeChange?: (code: string) => void;
-  
+  /** Tuning API from useTuning (owned by parent workspace). */
+  tuning: UseTuningReturn;
+
+  /** Field ids selected on the design canvas — scroll/highlight in Structure. */
+  highlightedFieldIds?: string[];
+
   /** Callback when panel is closed */
   onClose?: () => void;
-  
+
   /** Optional className */
   className?: string;
 }
@@ -42,35 +35,16 @@ export interface TuningPanelProps {
 /**
  * Main tuning panel component
  */
-export function TuningPanel({
-  schema,
-  code,
-  onSchemaChange,
-  onCodeChange,
-  onClose,
-  className,
-}: TuningPanelProps) {
-  // Initialize tuning hook
-  const tuning = useTuning(schema, code, {
-    onSchemaChange,
-    onCodeChange,
-    maxHistorySize: 50,
-    autoSave: true,
-    storageKey: `nullrift-tuning-${schema.id}`,
-  });
-
-  // Keyboard shortcuts
+export function TuningPanel({ tuning, highlightedFieldIds = [], onClose, className }: TuningPanelProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + Z for undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         if (tuning.canUndo) {
           tuning.undo();
         }
       }
-      
-      // Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y for redo
+
       if (
         ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') ||
         ((e.ctrlKey || e.metaKey) && e.key === 'y')
@@ -85,6 +59,10 @@ export function TuningPanel({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [tuning]);
+
+  const historyLen = tuning.state.history.length;
+  const historyLabel =
+    historyLen === 0 ? '0 / 0' : `${tuning.state.historyIndex + 1} / ${historyLen}`;
 
   return (
     <Card
@@ -158,28 +136,15 @@ export function TuningPanel({
         </Button>
       </div>
 
-      {/* Sections */}
       <div className="flex-1 overflow-y-auto">
-        {/* Style Section */}
-        <TuningSection
-          title="Style"
-          icon={<Palette className="h-4 w-4" />}
-          defaultOpen={true}
-        >
-          <StyleControls
-            styleOverrides={tuning.state.styleOverrides}
-            onStyleChange={tuning.updateStyle}
-          />
+        <TuningSection title="Style" icon={<Palette className="h-4 w-4" />} defaultOpen={true}>
+          <StyleControls styleOverrides={tuning.state.styleOverrides} onStyleChange={tuning.updateStyle} />
         </TuningSection>
 
-        {/* Structure Section */}
-        <TuningSection
-          title="Structure"
-          icon={<Layout className="h-4 w-4" />}
-          defaultOpen={false}
-        >
+        <TuningSection title="Structure" icon={<Layout className="h-4 w-4" />} defaultOpen={false}>
           <StructureControls
             schema={tuning.currentSchema}
+            highlightedFieldIds={highlightedFieldIds}
             onAddField={tuning.addField}
             onRemoveField={tuning.removeField}
             onReorderFields={tuning.reorderFields}
@@ -188,12 +153,7 @@ export function TuningPanel({
           />
         </TuningSection>
 
-        {/* Behavior Section */}
-        <TuningSection
-          title="Behavior"
-          icon={<Settings className="h-4 w-4" />}
-          defaultOpen={false}
-        >
+        <TuningSection title="Behavior" icon={<Settings className="h-4 w-4" />} defaultOpen={false}>
           <BehaviorControls
             behaviorSettings={tuning.state.behaviorSettings}
             onBehaviorChange={tuning.updateBehavior}
@@ -203,9 +163,7 @@ export function TuningPanel({
 
       <div className="border-t border-border bg-muted/20 px-4 py-2.5">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            History: {tuning.state.historyIndex + 1} / {tuning.state.history.length}
-          </span>
+          <span>History: {historyLabel}</span>
           <span>
             {tuning.currentSchema.fields.length} field
             {tuning.currentSchema.fields.length !== 1 ? 's' : ''}
@@ -213,7 +171,6 @@ export function TuningPanel({
         </div>
       </div>
 
-      {/* Debug Info (Development Only) */}
       {process.env.NODE_ENV === 'development' && (
         <details className="border-t border-border bg-muted/15 px-4 py-2">
           <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">

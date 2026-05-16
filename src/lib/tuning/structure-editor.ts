@@ -160,12 +160,18 @@ export class StructureEditor {
       throw new Error('Cannot change field ID');
     }
 
-    // Merge changes with existing field
+    // Merge changes with existing field (deep-merge layout bucket)
     updatedSchema.fields = [...schema.fields];
+    const prevField = schema.fields[fieldIndex];
+    const mergedLayout =
+      changes.layout !== undefined || prevField.layout
+        ? { ...prevField.layout, ...changes.layout }
+        : undefined;
     updatedSchema.fields[fieldIndex] = {
-      ...schema.fields[fieldIndex],
+      ...prevField,
       ...changes,
-      id: fieldId, // Ensure ID doesn't change
+      id: fieldId,
+      ...(mergedLayout !== undefined ? { layout: mergedLayout } : {}),
     };
 
     return updatedSchema;

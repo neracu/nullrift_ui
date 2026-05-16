@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Copy } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
@@ -26,7 +26,10 @@ import { Button } from '@/components/ui/button';
 export interface StructureControlsProps {
   /** Current component schema */
   schema: ComponentSchema;
-  
+
+  /** Highlight rows for ids selected on the design canvas */
+  highlightedFieldIds?: string[];
+
   /** Callback when field is added */
   onAddField: (field: FieldDefinition) => void;
   
@@ -51,6 +54,7 @@ export interface StructureControlsProps {
  */
 export function StructureControls({
   schema,
+  highlightedFieldIds = [],
   onAddField,
   onRemoveField,
   onReorderFields,
@@ -58,6 +62,14 @@ export function StructureControls({
   onLayoutChange,
   disabled = false,
 }: StructureControlsProps) {
+  const rowRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+
+  useEffect(() => {
+    const first = highlightedFieldIds[0];
+    if (!first) return;
+    const el = rowRefs.current.get(first);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [highlightedFieldIds]);
   const [selectedFieldType, setSelectedFieldType] = useState<FieldDefinition['type']>('input');
   const [newFieldLabel, setNewFieldLabel] = useState('');
 
@@ -162,9 +174,15 @@ export function StructureControls({
             schema.fields.map((field, index) => (
               <div
                 key={field.id}
+                ref={(el) => {
+                  if (el) rowRefs.current.set(field.id, el);
+                  else rowRefs.current.delete(field.id);
+                }}
                 className={cn(
                   'group flex items-center gap-2 rounded-md border border-white/10',
-                  'bg-black/30 p-2 transition-colors hover:bg-white/5'
+                  'bg-black/30 p-2 transition-colors hover:bg-white/5',
+                  highlightedFieldIds.includes(field.id) &&
+                    'border-primary ring-1 ring-primary/50 bg-primary/5'
                 )}
               >
                 {/* Drag Handle */}

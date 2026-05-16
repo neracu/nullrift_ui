@@ -7,9 +7,9 @@
 'use client';
 
 import React from 'react';
-import { Monitor, Smartphone, Tablet, Maximize, Sun, Moon, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Monitor, Smartphone, Tablet, Maximize, Sun, Moon, ZoomIn, ZoomOut, RotateCcw, PenLine, MousePointer2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { PreviewControlsProps, ViewportSize } from '@/lib/preview/types';
+import type { PreviewControlsProps, ViewportSize, PreviewCanvasMode } from '@/lib/preview/types';
 import { cn } from '@/lib/utils';
 
 /**
@@ -23,7 +23,9 @@ export function PreviewControls({
   onViewportChange,
   onThemeChange,
   onZoomChange,
-  onReset
+  onReset,
+  canvasMode = 'interact',
+  onCanvasModeChange,
 }: PreviewControlsProps) {
   const viewportOptions: Array<{ value: ViewportSize; icon: React.ReactNode; label: string }> = [
     { value: 'mobile', icon: <Smartphone className="h-4 w-4" />, label: 'Mobile' },
@@ -34,6 +36,51 @@ export function PreviewControls({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {onCanvasModeChange && (
+        <div
+          className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-black/20 p-1"
+          role="group"
+          aria-label="Preview mode"
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isLoading}
+            className={cn(
+              'h-8 gap-1.5 px-2 sm:px-3',
+              canvasMode === 'interact'
+                ? 'bg-white/10 text-white'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            )}
+            aria-pressed={canvasMode === 'interact'}
+            onClick={() => onCanvasModeChange('interact')}
+            title="Interact — use the form (I)"
+          >
+            <MousePointer2 className="h-4 w-4" />
+            <span className="hidden text-xs sm:inline">Interact</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isLoading}
+            className={cn(
+              'h-8 gap-1.5 px-2 sm:px-3',
+              canvasMode === 'design'
+                ? 'bg-white/10 text-white'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            )}
+            aria-pressed={canvasMode === 'design'}
+            onClick={() => onCanvasModeChange('design')}
+            title="Design — layout on canvas (D)"
+          >
+            <PenLine className="h-4 w-4" />
+            <span className="hidden text-xs sm:inline">Design</span>
+          </Button>
+        </div>
+      )}
+
       {/* Viewport Selector */}
       <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
         {viewportOptions.map((option) => (

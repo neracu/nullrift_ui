@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import { Copy, Eye, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -10,10 +9,8 @@ import { AiAssistant, type AiAssistantHandle } from "@/components/dashboard/ai-a
 import { PromptInput } from "@/components/builder/prompt-input";
 import { GenerationLoading } from "@/components/builder/generation-loading";
 import { GenerationError } from "@/components/builder/generation-error";
-import { PreviewCanvas } from "@/components/builder/preview-canvas";
-import { TuningPanel } from "@/components/builder/tuning-panel";
+import { BuilderSuccessWorkspace, type BuilderOutputView } from "@/components/builder/builder-success-workspace";
 import { ExportModal } from "@/components/builder/export-modal";
-import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Sheet,
@@ -29,14 +26,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import {
   useKeyboardShortcuts,
   COMMON_SHORTCUTS,
   type KeyboardShortcut,
 } from "@/hooks/use-keyboard-shortcuts";
-import { fadeIn, slideInRight, pageTransition } from "@/lib/animations/variants";
+import { fadeIn, pageTransition } from "@/lib/animations/variants";
 import {
   BUILDER_SECTION_IDS,
   scrollToBuilderSection,
@@ -45,7 +41,6 @@ import { cn } from "@/lib/utils";
 import type { ComponentSchema } from "@/lib/watsonx/types";
 
 type BuilderPhase = "idle" | "loading" | "error" | "success";
-type BuilderOutputView = "preview" | "code";
 
 interface GenerateErrorJson {
   error?: string;
@@ -84,6 +79,7 @@ export function BuilderClient() {
   const [showTuningPanel, setShowTuningPanel] = useState(false);
   const [outputView, setOutputView] = useState<BuilderOutputView>("preview");
   const [showExportModal, setShowExportModal] = useState(false);
+  const [generationNonce, setGenerationNonce] = useState(0);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
   const [librarySheetOpen, setLibrarySheetOpen] = useState(false);
   const [lastPrompt, setLastPrompt] = useState<string>("");
@@ -96,6 +92,7 @@ export function BuilderClient() {
 
   const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const assistantRef = useRef<AiAssistantHandle>(null);
+  const tuningDirtyRef = useRef(false);
 
   useEffect(() => {
     if (phase === "success") {
@@ -104,6 +101,13 @@ export function BuilderClient() {
   }, [phase]);
 
   const runGenerate = useCallback(async (prompt: string) => {
+    if (phase === "success" && tuningDirtyRef.current) {
+      const proceed = window.confirm(
+        "Regenerating replaces the current component and clears tuning history. Continue?"
+      );
+      if (!proceed) return;
+    }
+
     setLastPrompt(prompt);
     setPhase("loading");
     setErrorState(null);
@@ -143,6 +147,8 @@ export function BuilderClient() {
         setCurrentCode(okBody.code);
         setShowTuningPanel(false);
         setPhase("success");
+        tuningDirtyRef.current = false;
+        setGenerationNonce((n) => n + 1);
         toast.success("Component generated successfully!", {
           description: "Your component is ready to customize and export",
         });
@@ -167,7 +173,7 @@ export function BuilderClient() {
         description: "Check your connection and try again",
       });
     }
-  }, []);
+  }, [phase]);
 
   const handleRetry = useCallback(() => {
     if (lastPrompt) {
@@ -358,152 +364,24 @@ export function BuilderClient() {
                   </motion.div>
                 )}
 
-                {phase === "success" &&
-                  generatedCode &&
-                  generatedSchema &&
-                  currentSchema && (
-                    <motion.div
-                      key="success"
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      variants={fadeIn}
-                      className="space-y-6"
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div
-                          className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-1"
-                          role="group"
-                          aria-label="Switch between preview and generated code"
-                        >
-                          <Button
-                            type="button"
-                            variant={outputView === "preview" ? "secondary" : "ghost"}
-                            size="icon"
-                            className="size-9 shrink-0"
-                            aria-label="Show interactive preview"
-                            aria-pressed={outputView === "preview"}
-                            onClick={() => setOutputView("preview")}
-                          >
-                            <Eye className="size-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={outputView === "code" ? "secondary" : "ghost"}
-                            size="icon"
-                            className="size-9 shrink-0 font-mono text-sm font-bold leading-none"
-                            aria-label="Show generated code"
-                            aria-pressed={outputView === "code"}
-                            onClick={() => setOutputView("code")}
-                          >
-                            <span aria-hidden className="select-none">
-                              &lt;&gt;
-                            </span>
-                          </Button>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowTuningPanel(!showTuningPanel)}
-                          className="gap-2 self-end sm:self-auto"
-                        >
-                          <Settings className="h-4 w-4" />
-                          {showTuningPanel ? "Hide" : "Show"} tuning
-                        </Button>
-                      </div>
-
-                      <div
-                        className={`grid gap-6 ${showTuningPanel ? "lg:grid-cols-[1fr_380px]" : "grid-cols-1"}`}
-                      >
-                        <div className="relative min-h-[min(420px,50vh)] space-y-6">
-                          <div className={cn(outputView === "preview" ? "block" : "hidden")}>
-                            <PreviewCanvas
-                              schema={currentSchema}
-                              code={currentCode}
-                              onSubmit={(data) => {
-                                console.log("Form submitted:", data);
-                                toast.success("Form submitted successfully!", {
-                                  description: "Check the console for submitted data",
-                                });
-                              }}
-                              onError={(error) => {
-                                console.error("Preview error:", error);
-                                toast.error("Preview error", {
-                                  description: error.message,
-                                });
-                              }}
-                            />
-                          </div>
-
-                          <div className={cn(outputView === "code" ? "block" : "hidden")}>
-                            <Card>
-                              <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
-                                <div>
-                                  <CardTitle className="text-lg">Generated code</CardTitle>
-                                  <CardDescription>Framework targets (React live)</CardDescription>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={handleCopyCode}
-                                  className="gap-2"
-                                >
-                                  <Copy className="h-4 w-4" />
-                                  Copy
-                                </Button>
-                              </CardHeader>
-                              <CardContent>
-                                <Tabs defaultValue="react" className="w-full">
-                                  <TabsList>
-                                    <TabsTrigger value="react">React</TabsTrigger>
-                                    <TabsTrigger value="vue">Vue</TabsTrigger>
-                                    <TabsTrigger value="html">HTML</TabsTrigger>
-                                  </TabsList>
-                                  <TabsContent value="react" className="mt-4">
-                                    <pre className="max-h-[480px] overflow-auto rounded-md border border-border bg-muted/40 p-4 text-left text-xs leading-relaxed text-foreground">
-                                      <code>{currentCode}</code>
-                                    </pre>
-                                  </TabsContent>
-                                  <TabsContent value="vue" className="mt-4">
-                                    <p className="rounded-md border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
-                                      Vue export is not available in this build.
-                                    </p>
-                                  </TabsContent>
-                                  <TabsContent value="html" className="mt-4">
-                                    <p className="rounded-md border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
-                                      HTML export is not available in this build.
-                                    </p>
-                                  </TabsContent>
-                                </Tabs>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        </div>
-
-                        <AnimatePresence>
-                          {showTuningPanel && (
-                            <motion.div
-                              className="lg:sticky lg:top-4 lg:h-[calc(100vh-8rem)]"
-                              initial="hidden"
-                              animate="visible"
-                              exit="exit"
-                              variants={slideInRight}
-                            >
-                              <TuningPanel
-                                schema={generatedSchema}
-                                code={generatedCode}
-                                onSchemaChange={setCurrentSchema}
-                                onCodeChange={setCurrentCode}
-                                onClose={() => setShowTuningPanel(false)}
-                              />
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </motion.div>
-                  )}
+                {phase === "success" && generatedCode && generatedSchema && (
+                  <BuilderSuccessWorkspace
+                    key={`workspace-${generationNonce}`}
+                    generatedSchema={generatedSchema}
+                    generatedCode={generatedCode}
+                    outputView={outputView}
+                    onOutputViewChange={setOutputView}
+                    showTuningPanel={showTuningPanel}
+                    onToggleTuning={() => setShowTuningPanel((v) => !v)}
+                    onSchemaChange={setCurrentSchema}
+                    onCodeChange={setCurrentCode}
+                    onTuningDirtyChange={(dirty) => {
+                      tuningDirtyRef.current = dirty;
+                    }}
+                    onCopyCode={handleCopyCode}
+                    currentCode={currentCode}
+                  />
+                )}
               </AnimatePresence>
             </div>
           </section>

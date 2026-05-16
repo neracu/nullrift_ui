@@ -9,7 +9,6 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -49,7 +48,7 @@ export function StyleControls({
     <div className="space-y-6">
       {/* Border Radius */}
       <div className="space-y-2">
-        <Label htmlFor="border-radius" className="text-sm text-slate-300">
+        <Label htmlFor="border-radius" className="text-sm text-muted-foreground">
           Border Radius
         </Label>
         <Select
@@ -61,16 +60,16 @@ export function StyleControls({
         >
           <SelectTrigger
             id="border-radius"
-            className="bg-black/30 border-white/10 text-white"
+            className="h-9 border-border bg-background text-foreground"
           >
             <SelectValue placeholder="Select border radius" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-white/10">
+          <SelectContent className="border-border bg-popover text-popover-foreground">
             {BORDER_RADIUS_OPTIONS.map((option) => (
               <SelectItem
                 key={option.value}
                 value={option.value}
-                className="text-white hover:bg-white/10"
+                className="focus:bg-accent focus:text-accent-foreground"
               >
                 {option.label}
               </SelectItem>
@@ -81,7 +80,7 @@ export function StyleControls({
 
       {/* Spacing */}
       <div className="space-y-2">
-        <Label htmlFor="spacing" className="text-sm text-slate-300">
+        <Label htmlFor="spacing" className="text-sm text-muted-foreground">
           Spacing
         </Label>
         <Select
@@ -93,16 +92,16 @@ export function StyleControls({
         >
           <SelectTrigger
             id="spacing"
-            className="bg-black/30 border-white/10 text-white"
+            className="h-9 border-border bg-background text-foreground"
           >
             <SelectValue placeholder="Select spacing" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-white/10">
+          <SelectContent className="border-border bg-popover text-popover-foreground">
             {SPACING_OPTIONS.map((option) => (
               <SelectItem
                 key={option.value}
                 value={option.value}
-                className="text-white hover:bg-white/10"
+                className="focus:bg-accent focus:text-accent-foreground"
               >
                 {option.label}
               </SelectItem>
@@ -113,7 +112,7 @@ export function StyleControls({
 
       {/* Primary Color */}
       <div className="space-y-2">
-        <Label htmlFor="primary-color" className="text-sm text-slate-300">
+        <Label htmlFor="primary-color" className="text-sm text-muted-foreground">
           Primary Color
         </Label>
         <div className="flex gap-2">
@@ -124,8 +123,8 @@ export function StyleControls({
             onChange={(e) => onStyleChange({ primaryColor: e.target.value })}
             disabled={disabled}
             className={cn(
-              'h-10 w-20 cursor-pointer rounded-md border border-white/10',
-              'bg-black/30 disabled:cursor-not-allowed disabled:opacity-50'
+              'h-10 w-20 cursor-pointer rounded-md border border-border',
+              'bg-background disabled:cursor-not-allowed disabled:opacity-50'
             )}
           />
           <input
@@ -135,9 +134,9 @@ export function StyleControls({
             disabled={disabled}
             placeholder="#3b82f6"
             className={cn(
-              'flex-1 rounded-md border border-white/10 bg-black/30 px-3 py-2',
-              'text-sm text-white placeholder:text-slate-500',
-              'focus:outline-none focus:ring-2 focus:ring-tv-blue-500/50',
+              'flex-1 rounded-md border border-border bg-background px-3 py-2',
+              'text-sm text-foreground placeholder:text-muted-foreground',
+              'focus:outline-none focus:ring-2 focus:ring-ring',
               'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           />
@@ -146,7 +145,7 @@ export function StyleControls({
 
       {/* Secondary Color */}
       <div className="space-y-2">
-        <Label htmlFor="secondary-color" className="text-sm text-slate-300">
+        <Label htmlFor="secondary-color" className="text-sm text-muted-foreground">
           Secondary Color
         </Label>
         <div className="flex gap-2">
@@ -157,8 +156,8 @@ export function StyleControls({
             onChange={(e) => onStyleChange({ secondaryColor: e.target.value })}
             disabled={disabled}
             className={cn(
-              'h-10 w-20 cursor-pointer rounded-md border border-white/10',
-              'bg-black/30 disabled:cursor-not-allowed disabled:opacity-50'
+              'h-10 w-20 cursor-pointer rounded-md border border-border',
+              'bg-background disabled:cursor-not-allowed disabled:opacity-50'
             )}
           />
           <input
@@ -168,9 +167,9 @@ export function StyleControls({
             disabled={disabled}
             placeholder="#ec4899"
             className={cn(
-              'flex-1 rounded-md border border-white/10 bg-black/30 px-3 py-2',
-              'text-sm text-white placeholder:text-slate-500',
-              'focus:outline-none focus:ring-2 focus:ring-tv-blue-500/50',
+              'flex-1 rounded-md border border-border bg-background px-3 py-2',
+              'text-sm text-foreground placeholder:text-muted-foreground',
+              'focus:outline-none focus:ring-2 focus:ring-ring',
               'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           />
@@ -179,7 +178,7 @@ export function StyleControls({
 
       {/* Background Color */}
       <div className="space-y-2">
-        <Label htmlFor="background-color" className="text-sm text-slate-300">
+        <Label htmlFor="background-color" className="text-sm text-muted-foreground">
           Background Color
         </Label>
         <div className="flex gap-2">
@@ -190,8 +189,8 @@ export function StyleControls({
             onChange={(e) => onStyleChange({ backgroundColor: e.target.value })}
             disabled={disabled}
             className={cn(
-              'h-10 w-20 cursor-pointer rounded-md border border-white/10',
-              'bg-black/30 disabled:cursor-not-allowed disabled:opacity-50'
+              'h-10 w-20 cursor-pointer rounded-md border border-border',
+              'bg-background disabled:cursor-not-allowed disabled:opacity-50'
             )}
           />
           <input
@@ -201,9 +200,9 @@ export function StyleControls({
             disabled={disabled}
             placeholder="#ffffff"
             className={cn(
-              'flex-1 rounded-md border border-white/10 bg-black/30 px-3 py-2',
-              'text-sm text-white placeholder:text-slate-500',
-              'focus:outline-none focus:ring-2 focus:ring-tv-blue-500/50',
+              'flex-1 rounded-md border border-border bg-background px-3 py-2',
+              'text-sm text-foreground placeholder:text-muted-foreground',
+              'focus:outline-none focus:ring-2 focus:ring-ring',
               'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           />
@@ -212,7 +211,7 @@ export function StyleControls({
 
       {/* Font Family */}
       <div className="space-y-2">
-        <Label htmlFor="font-family" className="text-sm text-slate-300">
+        <Label htmlFor="font-family" className="text-sm text-muted-foreground">
           Font Family
         </Label>
         <Select
@@ -224,16 +223,16 @@ export function StyleControls({
         >
           <SelectTrigger
             id="font-family"
-            className="bg-black/30 border-white/10 text-white"
+            className="h-9 border-border bg-background text-foreground"
           >
             <SelectValue placeholder="Select font family" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-white/10">
+          <SelectContent className="border-border bg-popover text-popover-foreground">
             {FONT_FAMILY_OPTIONS.map((option) => (
               <SelectItem
                 key={option.value}
                 value={option.value}
-                className="text-white hover:bg-white/10"
+                className="focus:bg-accent focus:text-accent-foreground"
               >
                 {option.label}
               </SelectItem>
@@ -244,7 +243,7 @@ export function StyleControls({
 
       {/* Font Size */}
       <div className="space-y-2">
-        <Label htmlFor="font-size" className="text-sm text-slate-300">
+        <Label htmlFor="font-size" className="text-sm text-muted-foreground">
           Font Size
         </Label>
         <Select
@@ -256,16 +255,16 @@ export function StyleControls({
         >
           <SelectTrigger
             id="font-size"
-            className="bg-black/30 border-white/10 text-white"
+            className="h-9 border-border bg-background text-foreground"
           >
             <SelectValue placeholder="Select font size" />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-white/10">
+          <SelectContent className="border-border bg-popover text-popover-foreground">
             {FONT_SIZE_OPTIONS.map((option) => (
               <SelectItem
                 key={option.value}
                 value={option.value}
-                className="text-white hover:bg-white/10"
+                className="focus:bg-accent focus:text-accent-foreground"
               >
                 {option.label}
               </SelectItem>
@@ -289,10 +288,10 @@ export function StyleControls({
         }
         disabled={disabled}
         className={cn(
-          'w-full rounded-md border border-white/10 bg-black/30 px-4 py-2',
-          'text-sm text-slate-300 transition-colors',
-          'hover:bg-white/5 hover:text-white',
-          'focus:outline-none focus:ring-2 focus:ring-tv-blue-500/50',
+          'w-full rounded-md border border-border bg-muted/40 px-4 py-2',
+          'text-sm text-muted-foreground transition-colors',
+          'hover:bg-muted hover:text-foreground',
+          'focus:outline-none focus:ring-2 focus:ring-ring',
           'disabled:cursor-not-allowed disabled:opacity-50'
         )}
       >

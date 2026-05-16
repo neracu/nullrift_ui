@@ -43,6 +43,10 @@ export interface FieldDefinition {
     field: string;
     value: any;
   };
+  /** Responsive column span in grid/two-column layouts (design canvas). */
+  layout?: {
+    colSpan?: 1 | 2 | 3;
+  };
 }
 
 export interface StylingConfig {

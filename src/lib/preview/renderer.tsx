@@ -1,14 +1,27 @@
 /**
  * Dynamic Component Renderer
- * 
+ *
  * Converts ComponentSchema to interactive React elements using React.createElement().
  * Handles form state, validation, and user interactions.
  */
 
-import React, { type ReactElement, type FormEvent, type CSSProperties } from 'react';
+'use client';
+
+import React, { type ReactElement, type FormEvent, type CSSProperties, useMemo } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { ComponentSchema, FieldDefinition } from '../watsonx/types';
 import type { RendererProps, PreviewTheme } from './types';
 import { cn } from '../utils';
+import { DesignFieldRow } from '@/components/builder/design-field-row';
 
 /** Focus ring uses `--preview-primary` set on the preview form. */
 const PREVIEW_FOCUS_RING =
@@ -53,9 +66,60 @@ function resolvePreviewStyling(schema: ComponentSchema) {
   };
 }
 
+function fieldColSpanClass(
+  layout: ComponentSchema['layout'],
+  colSpan?: 1 | 2 | 3
+): string {
+  if (!colSpan || colSpan <= 1) return '';
+  if (layout === 'two-column') {
+    if (colSpan >= 2) return 'md:col-span-2';
+  }
+  if (layout === 'grid') {
+    if (colSpan === 2) return 'sm:col-span-2';
+    if (colSpan === 3) return 'sm:col-span-2 lg:col-span-3';
+  }
+  return '';
+}
+
+function mergeVisibleReorder(
+  allFields: FieldDefinition[],
+  visibleOrder: string[],
+  formData: Record<string, unknown>
+): string[] {
+  const visibleSet = new Set(
+    allFields.filter((f) => shouldShowField(f, formData)).map((f) => f.id)
+  );
+  let vi = 0;
+  return allFields.map((f) => {
+    if (!visibleSet.has(f.id)) return f.id;
+    return visibleOrder[vi++] ?? f.id;
+  });
+}
+
+function layoutContainerClass(
+  layout: ComponentSchema['layout'],
+  spacing: 'compact' | 'normal' | 'relaxed'
+): string {
+  const stackGap =
+    spacing === 'compact' ? 'space-y-2' : spacing === 'relaxed' ? 'space-y-6' : 'space-y-4';
+  const gridGap =
+    spacing === 'compact' ? 'gap-2' : spacing === 'relaxed' ? 'gap-6' : 'gap-4';
+
+  switch (layout) {
+    case 'single-column':
+      return stackGap;
+    case 'two-column':
+      return cn('grid grid-cols-1 md:grid-cols-2', gridGap);
+    case 'grid':
+      return cn('grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3', gridGap);
+    default:
+      return stackGap;
+  }
+}
+
 /**
  * Main Dynamic Renderer Component
- * 
+ *
  * Renders a component from schema with full interactivity
  */
 export function DynamicRenderer({
@@ -65,40 +129,106 @@ export function DynamicRenderer({
   theme,
   onFieldChange,
   onSubmit,
-  onValidationError
+  onValidationError: _unusedValidation,
+  canvasMode = 'interact',
+  selectedFieldIds = [],
+  onFieldCanvasSelect,
+  onCanvasReorder,
+  onCycleFieldColSpan,
 }: RendererProps): ReactElement {
-  // Handle form submission
+  const selectedSet = useMemo(() => new Set(selectedFieldIds), [selectedFieldIds]);
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (canvasMode === 'design') return;
     onSubmit(formData);
   };
 
-  // Build field elements
-  const fieldElements = schema.fields.map((field) => {
-    // Check if field should be shown (conditional rendering)
-    if (field.conditional && !shouldShowField(field, formData)) {
-      return null;
-    }
-
-    return (
-      <div key={field.id} className="space-y-2">
-        {createFieldElement(field, formData, errors, theme, onFieldChange)}
-      </div>
-    );
-  });
-
   const spacing = schema.styling?.spacing ?? 'normal';
 
-  // Apply layout
-  const layoutElement = applyLayout(fieldElements, schema.layout, spacing);
-
-  // Apply styling and wrap in form
-  return createFormWrapper(
-    layoutElement,
-    schema,
-    theme,
-    handleSubmit
+  const visibleFields = schema.fields.filter(
+    (field) => !field.conditional || shouldShowField(field, formData)
   );
+  const visibleIds = visibleFields.map((f) => f.id);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const onDragEnd = (event: DragEndEvent) => {
+    if (canvasMode !== 'design' || !onCanvasReorder) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = visibleIds.indexOf(String(active.id));
+    const newIndex = visibleIds.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    const nextVisible = arrayMove(visibleIds, oldIndex, newIndex);
+    const merged = mergeVisibleReorder(schema.fields, nextVisible, formData);
+    onCanvasReorder(merged);
+  };
+
+  const showColTool = schema.layout === 'two-column' || schema.layout === 'grid';
+
+  const buildFieldInner = (field: FieldDefinition) => (
+    <div className="space-y-2">
+      {createFieldElement(field, formData, errors, theme, onFieldChange)}
+    </div>
+  );
+
+  let layoutElement: ReactElement;
+
+  if (canvasMode === 'design') {
+    const gridClass = layoutContainerClass(schema.layout, spacing);
+    const isStack = schema.layout === 'single-column' || schema.layout === 'custom';
+
+    layoutElement = (
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={visibleIds}>
+          <div className={cn(isStack ? 'flex flex-col gap-3' : gridClass)}>
+            {visibleFields.map((field) => {
+              const selected = selectedSet.has(field.id);
+              const spanClass = fieldColSpanClass(schema.layout, field.layout?.colSpan);
+              const colLabel =
+                field.layout?.colSpan && field.layout.colSpan > 1
+                  ? `Span ${field.layout.colSpan}`
+                  : 'Span 1';
+
+              return (
+                <DesignFieldRow
+                  key={field.id}
+                  id={field.id}
+                  disabledSortable={false}
+                  selected={selected}
+                  showColTool={showColTool}
+                  colSpanLabel={colLabel}
+                  colSpanClass={spanClass}
+                  onColCycle={() => onCycleFieldColSpan?.(field.id)}
+                  onSelect={(additive) => onFieldCanvasSelect?.(field.id, { additive })}
+                >
+                  {buildFieldInner(field)}
+                </DesignFieldRow>
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
+  } else {
+    const fieldElements = schema.fields.map((field) => {
+      if (field.conditional && !shouldShowField(field, formData)) {
+        return null;
+      }
+      return (
+        <div key={field.id} className={cn('space-y-2', fieldColSpanClass(schema.layout, field.layout?.colSpan))}>
+          {createFieldElement(field, formData, errors, theme, onFieldChange)}
+        </div>
+      );
+    });
+    layoutElement = applyLayout(fieldElements, schema.layout, spacing);
+  }
+
+  return createFormWrapper(layoutElement, schema, theme, handleSubmit, canvasMode === 'design');
 }
 
 /**
@@ -615,7 +745,8 @@ function createFormWrapper(
   content: ReactElement,
   schema: ComponentSchema,
   theme: PreviewTheme,
-  onSubmit: (e: FormEvent<HTMLFormElement>) => void
+  onSubmit: (e: FormEvent<HTMLFormElement>) => void,
+  designMode = false
 ): ReactElement {
   const { styling } = schema;
   const spacing = styling.spacing || 'normal';
@@ -647,7 +778,13 @@ function createFormWrapper(
   );
 
   return (
-    <form onSubmit={onSubmit} className={formClasses} style={formStyle} noValidate>
+    <form
+      onSubmit={onSubmit}
+      className={formClasses}
+      style={formStyle}
+      noValidate
+      aria-label={designMode ? 'Component layout (design mode)' : undefined}
+    >
       {/* Form Title */}
       {schema.name && (
         <h2
@@ -682,7 +819,7 @@ function createFormWrapper(
       {content}
 
       {/* Submit Button */}
-      <div className="mt-6">
+      <div className={cn('mt-6', designMode && 'pointer-events-none opacity-40')}>
         <button
           type="submit"
           style={{ backgroundColor: ps.primaryColor }}

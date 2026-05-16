@@ -8,6 +8,11 @@
 import type { ComponentSchema } from '../watsonx/types';
 
 /**
+ * Preview canvas: interact with the form vs design (layout) editing.
+ */
+export type PreviewCanvasMode = 'interact' | 'design';
+
+/**
  * Viewport size options for responsive preview
  */
 export type ViewportSize = 'mobile' | 'tablet' | 'desktop' | 'full';
@@ -86,6 +91,24 @@ export interface PreviewProps {
   
   /** Callback when form is submitted */
   onSubmit?: (data: Record<string, any>) => void;
+
+  /** Design vs interact preview */
+  canvasMode?: PreviewCanvasMode;
+
+  /** Selected field ids on the canvas (design mode) */
+  selectedFieldIds?: string[];
+
+  /** Field picked on canvas */
+  onFieldCanvasSelect?: (fieldId: string, opts: { additive: boolean }) => void;
+
+  /** Reorder after drag-drop on canvas */
+  onCanvasReorder?: (newFieldOrder: string[]) => void;
+
+  /** Cycle column span for a field (grid / two-column) */
+  onCycleFieldColSpan?: (fieldId: string) => void;
+
+  /** Toggle interact vs design (passed to preview controls) */
+  onCanvasModeChange?: (mode: PreviewCanvasMode) => void;
 }
 
 /**
@@ -112,6 +135,17 @@ export interface RendererProps {
   
   /** Callback when validation fails */
   onValidationError?: (fieldId: string, error: string) => void;
+
+  /** Design vs interact preview */
+  canvasMode?: PreviewCanvasMode;
+
+  selectedFieldIds?: string[];
+
+  onFieldCanvasSelect?: (fieldId: string, opts: { additive: boolean }) => void;
+
+  onCanvasReorder?: (newFieldOrder: string[]) => void;
+
+  onCycleFieldColSpan?: (fieldId: string) => void;
 }
 
 /**
@@ -138,6 +172,17 @@ export interface PreviewFrameProps {
   
   /** Callback when error occurs */
   onError?: (error: Error) => void;
+
+  /** Design vs interact preview */
+  canvasMode?: PreviewCanvasMode;
+
+  selectedFieldIds?: string[];
+
+  onFieldCanvasSelect?: (fieldId: string, opts: { additive: boolean }) => void;
+
+  onCanvasReorder?: (newFieldOrder: string[]) => void;
+
+  onCycleFieldColSpan?: (fieldId: string) => void;
 }
 
 /**
@@ -167,6 +212,11 @@ export interface PreviewControlsProps {
   
   /** Callback when reset is clicked */
   onReset: () => void;
+
+  /** Interact vs design canvas */
+  canvasMode?: PreviewCanvasMode;
+
+  onCanvasModeChange?: (mode: PreviewCanvasMode) => void;
 }
 
 /**

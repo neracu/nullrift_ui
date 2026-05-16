@@ -302,6 +302,84 @@ export function useTuning(
   );
 
   /**
+   * Remove multiple fields in a single history entry
+   */
+  const removeFields = useCallback(
+    (fieldIds: string[]) => {
+      const unique = [...new Set(fieldIds)].filter(Boolean);
+      if (unique.length === 0) return;
+
+      addToHistory({
+        type: 'structure',
+        changes: {
+          structureChanges: {
+            ...state.structureChanges,
+            fieldsRemoved: [...state.structureChanges.fieldsRemoved, ...unique],
+          },
+        },
+        description:
+          unique.length === 1
+            ? `Removed field: ${unique[0]}`
+            : `Removed ${unique.length} fields`,
+      });
+
+      const newState = {
+        ...state,
+        structureChanges: {
+          ...state.structureChanges,
+          fieldsRemoved: [...state.structureChanges.fieldsRemoved, ...unique],
+        },
+      };
+
+      setState(newState);
+      applyChanges(newState);
+    },
+    [state, addToHistory, applyChanges]
+  );
+
+  /**
+   * Duplicate fields (append clones) in one history step
+   */
+  const duplicateFields = useCallback(
+    (fieldIds: string[]) => {
+      const additions: FieldDefinition[] = [];
+      for (let i = 0; i < fieldIds.length; i++) {
+        const id = fieldIds[i];
+        const src = currentSchema.fields.find((f) => f.id === id);
+        if (!src) continue;
+        const copy = JSON.parse(JSON.stringify(src)) as FieldDefinition;
+        copy.id = `field_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
+        copy.label = `${src.label} (copy)`;
+        additions.push(copy);
+      }
+      if (additions.length === 0) return;
+
+      addToHistory({
+        type: 'structure',
+        changes: {
+          structureChanges: {
+            ...state.structureChanges,
+            fieldsAdded: [...state.structureChanges.fieldsAdded, ...additions],
+          },
+        },
+        description: `Duplicated ${additions.length} field(s)`,
+      });
+
+      const newState = {
+        ...state,
+        structureChanges: {
+          ...state.structureChanges,
+          fieldsAdded: [...state.structureChanges.fieldsAdded, ...additions],
+        },
+      };
+
+      setState(newState);
+      applyChanges(newState);
+    },
+    [state, currentSchema, addToHistory, applyChanges]
+  );
+
+  /**
    * Reorder fields
    */
   const reorderFields = useCallback(
@@ -510,6 +588,8 @@ export function useTuning(
     [state, initialSchema, applyChanges]
   );
 
+  const isDirty = state.history.length > 0;
+
   return {
     state,
     currentSchema,
@@ -518,6 +598,9 @@ export function useTuning(
     resetStyles,
     addField,
     removeField,
+    removeFields,
+    duplicateFields,
+    isDirty,
     reorderFields,
     modifyField,
     changeLayout,
