@@ -78,9 +78,6 @@ export interface PreviewProps {
   /** Initial preview state */
   initialState?: Partial<PreviewState>;
   
-  /** Export handler */
-  onExport?: () => void;
-  
   /** Callback when state changes */
   onStateChange?: (state: PreviewState) => void;
   
@@ -170,26 +167,6 @@ export interface PreviewControlsProps {
   
   /** Callback when reset is clicked */
   onReset: () => void;
-}
-
-/**
- * Props for PreviewToolbar component
- */
-export interface PreviewToolbarProps {
-  /** Whether export is available */
-  canExport?: boolean;
-  
-  /** Whether code can be copied */
-  canCopy?: boolean;
-  
-  /** Callback when export is clicked */
-  onExport?: () => void;
-  
-  /** Callback when copy is clicked */
-  onCopy?: () => void;
-  
-  /** Callback when fullscreen is toggled */
-  onFullscreen?: () => void;
 }
 
 /**

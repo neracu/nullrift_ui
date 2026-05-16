@@ -113,13 +113,7 @@ export function GenerationLoading({ onCancel }: GenerationLoadingProps) {
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 8 }}
-      transition={{ duration: 0.25 }}
-      className="mx-auto w-full max-w-lg"
-    >
+    <div className="w-full">
       <Card className="border-border bg-card shadow-sm">
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-4">
           <div className="min-w-0 space-y-1">
@@ -218,7 +212,7 @@ export function GenerationLoading({ onCancel }: GenerationLoadingProps) {
           </ol>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 }
 

@@ -89,65 +89,61 @@ export function TuningPanel({
   return (
     <Card
       className={cn(
-        'flex h-full flex-col overflow-hidden',
-        'border-pink-500/20 bg-black/40 backdrop-blur-xl shadow-2xl shadow-pink-500/10',
+        'flex h-full flex-col overflow-hidden border-border bg-card text-card-foreground shadow-sm',
         className
       )}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-pink-500/10 to-blue-500/10 px-4 py-4">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="text-2xl">🎨</span>
-            UX Tuning Panel
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+            <Palette className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <span>UX Tuning</span>
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Customize your component visually
-          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Visual and structure overrides</p>
         </div>
-        
+
         {onClose && (
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="text-slate-400 hover:text-white"
+            className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label="Close tuning panel"
           >
-            <X className="h-5 w-5" />
+            <X className="size-4" />
           </Button>
         )}
       </div>
 
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 border-b border-white/10 bg-black/30 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/30 px-3 py-2">
         <Button
-          variant="glass"
+          variant="outline"
           size="sm"
           onClick={tuning.undo}
           disabled={!tuning.canUndo}
           title="Undo (Ctrl+Z)"
-          className="text-slate-300 hover:text-white disabled:opacity-30"
+          className="h-8 gap-1.5 text-xs"
         >
-          <Undo className="mr-2 h-4 w-4" />
+          <Undo className="size-3.5" />
           Undo
         </Button>
-        
+
         <Button
-          variant="glass"
+          variant="outline"
           size="sm"
           onClick={tuning.redo}
           disabled={!tuning.canRedo}
           title="Redo (Ctrl+Shift+Z)"
-          className="text-slate-300 hover:text-white disabled:opacity-30"
+          className="h-8 gap-1.5 text-xs"
         >
-          <Redo className="mr-2 h-4 w-4" />
+          <Redo className="size-3.5" />
           Redo
         </Button>
-        
-        <div className="flex-1" />
-        
+
+        <div className="min-w-[1rem] flex-1" />
+
         <Button
-          variant="glass"
+          variant="outline"
           size="sm"
           onClick={() => {
             if (confirm('Reset all tuning changes?')) {
@@ -155,9 +151,9 @@ export function TuningPanel({
             }
           }}
           title="Reset all changes"
-          className="text-slate-300 hover:text-red-400"
+          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
         >
-          <RotateCcw className="mr-2 h-4 w-4" />
+          <RotateCcw className="size-3.5" />
           Reset
         </Button>
       </div>
@@ -205,9 +201,8 @@ export function TuningPanel({
         </TuningSection>
       </div>
 
-      {/* Footer */}
-      <div className="border-t border-white/10 bg-black/20 px-4 py-3">
-        <div className="flex items-center justify-between text-xs text-slate-400">
+      <div className="border-t border-border bg-muted/20 px-4 py-2.5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
             History: {tuning.state.historyIndex + 1} / {tuning.state.history.length}
           </span>
@@ -220,17 +215,17 @@ export function TuningPanel({
 
       {/* Debug Info (Development Only) */}
       {process.env.NODE_ENV === 'development' && (
-        <details className="border-t border-white/10 bg-black/20 px-4 py-2">
-          <summary className="cursor-pointer text-xs text-slate-400 hover:text-slate-300">
+        <details className="border-t border-border bg-muted/15 px-4 py-2">
+          <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
             Debug Info
           </summary>
-          <div className="mt-2 space-y-1 text-xs text-slate-500">
+          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
             <div>Component ID: {tuning.state.componentId}</div>
             <div>Can Undo: {tuning.canUndo ? 'Yes' : 'No'}</div>
             <div>Can Redo: {tuning.canRedo ? 'Yes' : 'No'}</div>
             <div>
               Style Overrides:
-              <pre className="mt-1 rounded bg-black/50 p-2 text-[10px]">
+              <pre className="mt-1 rounded-md border border-border bg-muted/40 p-2 text-[10px] text-foreground">
                 {JSON.stringify(tuning.state.styleOverrides, null, 2)}
               </pre>
             </div>

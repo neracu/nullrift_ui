@@ -1,54 +1,45 @@
 /**
- * Export Modal Component
- * 
- * Modal dialog for configuring and exporting components.
- * Allows users to select format, options, preview files, and download.
+ * Export Component dialog: format, options, generate, preview, and download — themed for the app shell.
  */
 
 "use client";
 
-import { useState } from 'react';
-import { X, Download, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { CodeViewer } from './code-viewer';
-import { downloadZip, formatFileSize } from '@/lib/export';
-import { fadeIn, scaleIn } from '@/lib/animations/variants';
-import type { ComponentSchema } from '@/lib/watsonx/types';
-import type { TuningState } from '@/types/tuning';
-import type { ExportFormat, ExportOptions, ExportResponse } from '@/types/export';
-import { FORMAT_LABELS, FORMAT_DESCRIPTIONS } from '@/types/export';
+import { useEffect, useState } from "react";
+import { Download, Loader2, CheckCircle, AlertCircle, X } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { CodeViewer } from "./code-viewer";
+import { downloadZip, formatFileSize } from "@/lib/export";
+import { cn } from "@/lib/utils";
+import { EXPORT_MODAL_THEME } from "@/config/export-modal-theme";
+import type { ComponentSchema } from "@/lib/watsonx/types";
+import type { TuningState } from "@/types/tuning";
+import type { ExportFormat, ExportOptions, ExportResponse } from "@/types/export";
+import { FORMAT_LABELS, FORMAT_DESCRIPTIONS } from "@/types/export";
 
 interface ExportModalProps {
-  /** Whether modal is open */
   isOpen: boolean;
-  
-  /** Close handler */
   onClose: () => void;
-  
-  /** Component schema to export */
   schema: ComponentSchema;
-  
-  /** Current tuning state */
   tuningState?: TuningState;
 }
 
-type ExportPhase = 'config' | 'generating' | 'preview' | 'error';
+type ExportPhase = "config" | "generating" | "preview" | "error";
 
 /**
- * Export modal with format selection and options
+ * Modal: pick format and options, call /api/export, preview files, download ZIP or single file.
  */
-export function ExportModal({
-  isOpen,
-  onClose,
-  schema,
-  tuningState,
-}: ExportModalProps) {
-  const [phase, setPhase] = useState<ExportPhase>('config');
-  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('react-ts');
+export function ExportModal({ isOpen, onClose, schema, tuningState }: ExportModalProps) {
+  const [phase, setPhase] = useState<ExportPhase>("config");
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("react-ts");
   const [options, setOptions] = useState<ExportOptions>({
     includeTypes: true,
     includeTests: false,
@@ -61,17 +52,22 @@ export function ExportModal({
   const [exportResult, setExportResult] = useState<ExportResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Handle export generation
-   */
+  useEffect(() => {
+    if (isOpen) {
+      setPhase("config");
+      setExportResult(null);
+      setError(null);
+    }
+  }, [isOpen]);
+
   const handleExport = async () => {
-    setPhase('generating');
+    setPhase("generating");
     setError(null);
 
     try {
-      const response = await fetch('/api/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           schema,
           format: selectedFormat,
@@ -82,255 +78,241 @@ export function ExportModal({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Export failed');
+        throw new Error(errorData.error || "Export failed");
       }
 
       const result: ExportResponse = await response.json();
       setExportResult(result);
-      setPhase('preview');
-      toast.success('Export generated successfully!', {
+      setPhase("preview");
+      toast.success("Export generated successfully!", {
         description: `${result.metadata.fileCount} file(s) ready to download`,
       });
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Export failed';
+      const errorMsg = err instanceof Error ? err.message : "Export failed";
       setError(errorMsg);
-      setPhase('error');
-      toast.error('Export failed', {
+      setPhase("error");
+      toast.error("Export failed", {
         description: errorMsg,
       });
     }
   };
 
-  /**
-   * Handle download
-   */
   const handleDownload = () => {
     if (!exportResult) return;
 
     try {
       if (exportResult.files.length === 1) {
-        // Single file - download directly
         const file = exportResult.files[0];
-        const blob = new Blob([file.content], { type: 'text/plain' });
+        const blob = new Blob([file.content], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
         link.download = file.name;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        toast.success('File downloaded successfully!');
+        toast.success("File downloaded successfully!");
       } else if (exportResult.zipData) {
-        // Multiple files - download as ZIP
         const filename = `${exportResult.metadata.componentName.toLowerCase()}-${selectedFormat}.zip`;
         downloadZip(exportResult.zipData, filename);
-        toast.success('ZIP file downloaded successfully!', {
+        toast.success("ZIP file downloaded successfully!", {
           description: `${exportResult.metadata.fileCount} files included`,
         });
       }
-    } catch (err) {
-      toast.error('Download failed', {
-        description: 'Please try again',
+    } catch {
+      toast.error("Download failed", {
+        description: "Please try again",
       });
     }
   };
 
-  /**
-   * Reset and close
-   */
   const handleClose = () => {
-    setPhase('config');
+    setPhase("config");
     setExportResult(null);
     setError(null);
     onClose();
   };
 
-  /**
-   * Update option
-   */
   const updateOption = (key: keyof ExportOptions, value: boolean) => {
-    setOptions(prev => ({ ...prev, [key]: value }));
+    setOptions((prev) => ({ ...prev, [key]: value }));
   };
 
-  /**
-   * Check if option is applicable to current format
-   */
   const isOptionApplicable = (option: keyof ExportOptions): boolean => {
     const applicability: Record<keyof ExportOptions, ExportFormat[]> = {
-      includeTypes: ['react-ts', 'vue'],
-      includeTests: ['react-ts', 'react-js', 'vue'],
-      includeStorybook: ['react-ts', 'react-js', 'vue'],
-      bundled: ['html'],
-      includePackageJson: ['react-ts', 'react-js', 'vue'],
-      includeReadme: ['react-ts', 'react-js', 'vue', 'html'],
-      includeComments: ['react-ts', 'react-js', 'vue', 'html'],
-      componentName: ['react-ts', 'react-js', 'vue', 'html'],
+      includeTypes: ["react-ts", "vue"],
+      includeTests: ["react-ts", "react-js", "vue"],
+      includeStorybook: ["react-ts", "react-js", "vue"],
+      bundled: ["html"],
+      includePackageJson: ["react-ts", "react-js", "vue"],
+      includeReadme: ["react-ts", "react-js", "vue", "html"],
+      includeComments: ["react-ts", "react-js", "vue", "html"],
+      componentName: ["react-ts", "react-js", "vue", "html"],
     };
 
     return applicability[option]?.includes(selectedFormat) ?? true;
   };
 
-  if (!isOpen) return null;
-
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={handleClose}
-        >
-          <motion.div
-            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={scaleIn}
-            onClick={(e) => e.stopPropagation()}
-          >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Export Component
-          </h2>
-          <button
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+    >
+      <DialogContent
+        className={cn(EXPORT_MODAL_THEME.dialogContent, EXPORT_MODAL_THEME.hideRadixClose)}
+      >
+        <DialogDescription className={EXPORT_MODAL_THEME.subtitle}>
+          Choose export format and options, then generate a downloadable bundle.
+        </DialogDescription>
+
+        <div className={EXPORT_MODAL_THEME.header}>
+          <DialogTitle className={EXPORT_MODAL_THEME.title}>Export Component</DialogTitle>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Close export dialog"
           >
-            <X className="h-5 w-5" />
-          </button>
+            <X className="size-4" />
+          </Button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {phase === 'config' && (
-            <div className="space-y-6">
-              {/* Format Selection */}
+        <div className={EXPORT_MODAL_THEME.body}>
+          {phase === "config" && (
+            <div className="space-y-8">
               <div>
-                <Label className="text-base font-semibold mb-3 block">
-                  Export Format
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {(['react-ts', 'react-js', 'vue', 'html'] as ExportFormat[]).map((format) => (
-                    <button
-                      key={format}
-                      onClick={() => setSelectedFormat(format)}
-                      className={`
-                        p-4 rounded-lg border-2 text-left transition-all
-                        ${
-                          selectedFormat === format
-                            ? 'border-blue-600 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }
-                      `}
-                    >
-                      <div className="font-semibold text-gray-900 mb-1">
-                        {FORMAT_LABELS[format]}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {FORMAT_DESCRIPTIONS[format]}
-                      </div>
-                    </button>
-                  ))}
+                <Label className={EXPORT_MODAL_THEME.sectionHeading}>Export format</Label>
+                <div className={EXPORT_MODAL_THEME.formatGrid}>
+                  {(["react-ts", "react-js", "vue", "html"] as ExportFormat[]).map((format) => {
+                    const selected = selectedFormat === format;
+                    return (
+                      <button
+                        key={format}
+                        type="button"
+                        onClick={() => setSelectedFormat(format)}
+                        className={cn(
+                          EXPORT_MODAL_THEME.formatCardBase,
+                          selected
+                            ? EXPORT_MODAL_THEME.formatCardSelected
+                            : EXPORT_MODAL_THEME.formatCardIdle
+                        )}
+                      >
+                        <div className={EXPORT_MODAL_THEME.formatLabel}>{FORMAT_LABELS[format]}</div>
+                        <div className={EXPORT_MODAL_THEME.formatDescription}>
+                          {FORMAT_DESCRIPTIONS[format]}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Export Options */}
               <div>
-                <Label className="text-base font-semibold mb-3 block">
-                  Export Options
-                </Label>
+                <Label className={EXPORT_MODAL_THEME.sectionHeading}>Export options</Label>
                 <div className="space-y-3">
-                  {isOptionApplicable('includeTypes') && (
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
+                  {isOptionApplicable("includeTypes") && (
+                    <div className={EXPORT_MODAL_THEME.optionRow}>
                       <div>
-                        <div className="font-medium text-gray-900">Include Type Definitions</div>
-                        <div className="text-sm text-gray-600">Generate TypeScript type files</div>
+                        <div className={EXPORT_MODAL_THEME.optionTitle}>Include type definitions</div>
+                        <div className={EXPORT_MODAL_THEME.optionDescription}>
+                          Generate TypeScript type files
+                        </div>
                       </div>
                       <Switch
                         checked={options.includeTypes ?? true}
-                        onCheckedChange={(checked) => updateOption('includeTypes', checked)}
+                        onCheckedChange={(checked) => updateOption("includeTypes", checked)}
                       />
                     </div>
                   )}
 
-                  {isOptionApplicable('includeTests') && (
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
+                  {isOptionApplicable("includeTests") && (
+                    <div className={EXPORT_MODAL_THEME.optionRow}>
                       <div>
-                        <div className="font-medium text-gray-900">Include Tests</div>
-                        <div className="text-sm text-gray-600">Generate test files</div>
+                        <div className={EXPORT_MODAL_THEME.optionTitle}>Include tests</div>
+                        <div className={EXPORT_MODAL_THEME.optionDescription}>Generate test files</div>
                       </div>
                       <Switch
                         checked={options.includeTests ?? false}
-                        onCheckedChange={(checked) => updateOption('includeTests', checked)}
+                        onCheckedChange={(checked) => updateOption("includeTests", checked)}
                       />
                     </div>
                   )}
 
-                  {isOptionApplicable('includeStorybook') && (
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
+                  {isOptionApplicable("includeStorybook") && (
+                    <div className={EXPORT_MODAL_THEME.optionRow}>
                       <div>
-                        <div className="font-medium text-gray-900">Include Storybook</div>
-                        <div className="text-sm text-gray-600">Generate Storybook stories</div>
+                        <div className={EXPORT_MODAL_THEME.optionTitle}>Include Storybook</div>
+                        <div className={EXPORT_MODAL_THEME.optionDescription}>
+                          Generate Storybook stories
+                        </div>
                       </div>
                       <Switch
                         checked={options.includeStorybook ?? false}
-                        onCheckedChange={(checked) => updateOption('includeStorybook', checked)}
+                        onCheckedChange={(checked) => updateOption("includeStorybook", checked)}
                       />
                     </div>
                   )}
 
-                  {isOptionApplicable('bundled') && (
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
+                  {isOptionApplicable("bundled") && (
+                    <div className={EXPORT_MODAL_THEME.optionRow}>
                       <div>
-                        <div className="font-medium text-gray-900">Single File</div>
-                        <div className="text-sm text-gray-600">Bundle everything in one file</div>
+                        <div className={EXPORT_MODAL_THEME.optionTitle}>Single file</div>
+                        <div className={EXPORT_MODAL_THEME.optionDescription}>
+                          Bundle everything in one file
+                        </div>
                       </div>
                       <Switch
                         checked={options.bundled ?? false}
-                        onCheckedChange={(checked) => updateOption('bundled', checked)}
+                        onCheckedChange={(checked) => updateOption("bundled", checked)}
                       />
                     </div>
                   )}
 
-                  {isOptionApplicable('includePackageJson') && (
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
+                  {isOptionApplicable("includePackageJson") && (
+                    <div className={EXPORT_MODAL_THEME.optionRow}>
                       <div>
-                        <div className="font-medium text-gray-900">Include package.json</div>
-                        <div className="text-sm text-gray-600">Add package.json with dependencies</div>
+                        <div className={EXPORT_MODAL_THEME.optionTitle}>Include package.json</div>
+                        <div className={EXPORT_MODAL_THEME.optionDescription}>
+                          Add package.json with dependencies
+                        </div>
                       </div>
                       <Switch
                         checked={options.includePackageJson ?? true}
-                        onCheckedChange={(checked) => updateOption('includePackageJson', checked)}
+                        onCheckedChange={(checked) => updateOption("includePackageJson", checked)}
                       />
                     </div>
                   )}
 
-                  {isOptionApplicable('includeReadme') && (
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
+                  {isOptionApplicable("includeReadme") && (
+                    <div className={EXPORT_MODAL_THEME.optionRow}>
                       <div>
-                        <div className="font-medium text-gray-900">Include README</div>
-                        <div className="text-sm text-gray-600">Add README with usage instructions</div>
+                        <div className={EXPORT_MODAL_THEME.optionTitle}>Include README</div>
+                        <div className={EXPORT_MODAL_THEME.optionDescription}>
+                          Add README with usage instructions
+                        </div>
                       </div>
                       <Switch
                         checked={options.includeReadme ?? true}
-                        onCheckedChange={(checked) => updateOption('includeReadme', checked)}
+                        onCheckedChange={(checked) => updateOption("includeReadme", checked)}
                       />
                     </div>
                   )}
 
-                  {isOptionApplicable('includeComments') && (
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
+                  {isOptionApplicable("includeComments") && (
+                    <div className={EXPORT_MODAL_THEME.optionRow}>
                       <div>
-                        <div className="font-medium text-gray-900">Include Comments</div>
-                        <div className="text-sm text-gray-600">Add code comments and JSDoc</div>
+                        <div className={EXPORT_MODAL_THEME.optionTitle}>Include comments</div>
+                        <div className={EXPORT_MODAL_THEME.optionDescription}>
+                          Add code comments and JSDoc
+                        </div>
                       </div>
                       <Switch
                         checked={options.includeComments ?? true}
-                        onCheckedChange={(checked) => updateOption('includeComments', checked)}
+                        onCheckedChange={(checked) => updateOption("includeComments", checked)}
                       />
                     </div>
                   )}
@@ -339,77 +321,69 @@ export function ExportModal({
             </div>
           )}
 
-          {phase === 'generating' && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-12 w-12 text-blue-600 animate-spin mb-4" />
-              <p className="text-lg font-medium text-gray-900 mb-2">Generating files...</p>
-              <p className="text-sm text-gray-600">This may take a moment</p>
+          {phase === "generating" && (
+            <div className={EXPORT_MODAL_THEME.stateStack}>
+              <Loader2 className="mb-4 size-12 animate-spin text-primary" aria-hidden />
+              <p className={EXPORT_MODAL_THEME.stateTitle}>Generating files</p>
+              <p className={cn(EXPORT_MODAL_THEME.stateCaption, "mt-2 max-w-sm")}>
+                This may take a moment.
+              </p>
             </div>
           )}
 
-          {phase === 'preview' && exportResult && (
+          {phase === "preview" && exportResult && (
             <div className="space-y-4">
-              {/* Success message */}
-              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-medium text-green-900">Export successful!</div>
-                  <div className="text-sm text-green-700">
-                    Generated {exportResult.metadata.fileCount} file(s) • {formatFileSize(exportResult.metadata.totalSize)}
+              <div className={EXPORT_MODAL_THEME.successBanner}>
+                <CheckCircle className={EXPORT_MODAL_THEME.successIcon} aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <div className={EXPORT_MODAL_THEME.successHeading}>Export ready</div>
+                  <div className={EXPORT_MODAL_THEME.successMeta}>
+                    {exportResult.metadata.fileCount} file
+                    {exportResult.metadata.fileCount !== 1 ? "s" : ""} ·{" "}
+                    {formatFileSize(exportResult.metadata.totalSize)}
                   </div>
                 </div>
               </div>
 
-              {/* Code preview */}
-              <CodeViewer
-                files={exportResult.files}
-                title="Generated Files"
-                maxHeight="400px"
-              />
+              <CodeViewer files={exportResult.files} title="Generated files" maxHeightClassName="max-h-[min(28rem,50vh)]" />
             </div>
           )}
 
-          {phase === 'error' && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <AlertCircle className="h-12 w-12 text-red-600 mb-4" />
-              <p className="text-lg font-medium text-gray-900 mb-2">Export failed</p>
-              <p className="text-sm text-gray-600 text-center max-w-md">{error}</p>
+          {phase === "error" && (
+            <div className={EXPORT_MODAL_THEME.stateStack}>
+              <AlertCircle className={EXPORT_MODAL_THEME.errorIcon} aria-hidden />
+              <p className={EXPORT_MODAL_THEME.stateTitle}>Export failed</p>
+              <p className={cn(EXPORT_MODAL_THEME.stateCaption, "mt-2 max-w-md")}>{error}</p>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <Button
-            variant="ghost"
-            onClick={handleClose}
-          >
-            {phase === 'preview' ? 'Close' : 'Cancel'}
+        <div className={EXPORT_MODAL_THEME.footer}>
+          <Button type="button" variant="ghost" onClick={handleClose}>
+            {phase === "preview" ? "Close" : "Cancel"}
           </Button>
 
-          {phase === 'config' && (
-            <Button onClick={handleExport}>
-              Generate Export
+          {phase === "config" && (
+            <Button type="button" onClick={handleExport}>
+              Generate export
             </Button>
           )}
 
-          {phase === 'preview' && (
-            <Button onClick={handleDownload}>
-              <Download className="h-4 w-4 mr-2" />
-              Download {exportResult && exportResult.files.length > 1 ? 'ZIP' : 'File'}
+          {phase === "preview" && (
+            <Button type="button" onClick={handleDownload}>
+              <Download className="mr-2 size-4" />
+              Download {exportResult && exportResult.files.length > 1 ? "ZIP" : "file"}
             </Button>
           )}
 
-          {phase === 'error' && (
-            <Button onClick={() => setPhase('config')}>
-              Try Again
+          {phase === "error" && (
+            <Button type="button" onClick={() => setPhase("config")}>
+              Try again
             </Button>
           )}
         </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </DialogContent>
+    </Dialog>
   );
 }
 

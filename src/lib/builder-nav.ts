@@ -2,9 +2,7 @@
  * Builder shell navigation: routes, section ids, and external help link.
  */
 export const BUILDER_SECTION_IDS = {
-  workspace: "workspace",
   generate: "generate",
-  library: "library",
 } as const;
 
 export type BuilderSectionId =
@@ -14,7 +12,6 @@ export const BUILDER_LABELS = {
   brandTitle: "NullRift",
   brandSubtitle: "Builder",
   workspace: "Workspace",
-  generate: "New build",
   library: "Library",
   export: "Export",
   settings: "Shortcuts",

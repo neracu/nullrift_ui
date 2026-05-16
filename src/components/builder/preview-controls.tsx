@@ -82,36 +82,7 @@ export function PreviewControls({
         )}
       </Button>
 
-      {/* Zoom Controls */}
-      <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={isLoading || zoom <= 50}
-          className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-white/5"
-          onClick={() => onZoomChange(zoom - 10)}
-          title="Zoom out"
-        >
-          <ZoomOut className="h-4 w-4" />
-        </Button>
-        
-        <span className="min-w-[3rem] text-center text-xs font-medium text-slate-300">
-          {zoom}%
-        </span>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={isLoading || zoom >= 200}
-          className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-white/5"
-          onClick={() => onZoomChange(zoom + 10)}
-          title="Zoom in"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Reset Button */}
+      {/* Reset before scale — restores viewport/theme/zoom */}
       <Button
         variant="ghost"
         size="sm"
@@ -126,6 +97,35 @@ export function PreviewControls({
         <RotateCcw className="h-4 w-4" />
         <span className="hidden sm:inline text-xs">Reset</span>
       </Button>
+
+      {/* Zoom */}
+      <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isLoading || zoom <= 50}
+          className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-white/5"
+          onClick={() => onZoomChange(zoom - 10)}
+          title="Zoom out"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+
+        <span className="min-w-[3rem] text-center text-xs font-medium text-slate-300">
+          {zoom}%
+        </span>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isLoading || zoom >= 200}
+          className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-white/5"
+          onClick={() => onZoomChange(zoom + 10)}
+          title="Zoom in"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

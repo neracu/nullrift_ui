@@ -133,7 +133,11 @@ export const COMMON_SHORTCUTS = {
   UNDO: { key: 'z', ctrl: true, description: 'Undo last change' },
   REDO: { key: 'z', ctrl: true, shift: true, description: 'Redo last change' },
   SAVE: { key: 's', ctrl: true, description: 'Save current state' },
-  FOCUS_PROMPT: { key: 'k', ctrl: true, description: 'Focus prompt input' },
+  FOCUS_PROMPT: {
+    key: 'k',
+    ctrl: true,
+    description: 'Focus main prompt or assistant follow-up',
+  },
   CLOSE_MODAL: { key: 'Escape', description: 'Close modal or panel' },
   HELP: { key: '/', ctrl: true, description: 'Show keyboard shortcuts' },
 } as const;

@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { Check, Copy, Download, FileCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import type { ExportFile } from '@/types/export';
 
 interface CodeViewerProps {
@@ -25,8 +26,8 @@ interface CodeViewerProps {
   /** Show line numbers */
   showLineNumbers?: boolean;
   
-  /** Max height */
-  maxHeight?: string;
+  /** Max height as a Tailwind class (no inline styles) */
+  maxHeightClassName?: string;
 }
 
 /**
@@ -37,7 +38,7 @@ export function CodeViewer({
   title,
   className = '',
   showLineNumbers = true,
-  maxHeight = '600px',
+  maxHeightClassName = 'max-h-[min(28rem,50vh)]',
 }: CodeViewerProps) {
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
@@ -77,58 +78,63 @@ export function CodeViewer({
    */
   const getLanguageColor = (language: string): string => {
     const colors: Record<string, string> = {
-      typescript: 'text-blue-600',
-      javascript: 'text-yellow-600',
-      html: 'text-orange-600',
-      css: 'text-purple-600',
-      json: 'text-green-600',
-      markdown: 'text-gray-600',
+      typescript: 'text-sky-500',
+      javascript: 'text-amber-500',
+      html: 'text-orange-500',
+      css: 'text-violet-500',
+      json: 'text-emerald-500',
+      markdown: 'text-muted-foreground',
       vue: 'text-emerald-600',
     };
-    return colors[language] || 'text-gray-600';
+    return colors[language] || 'text-muted-foreground';
   };
 
   if (files.length === 0) {
     return (
-      <div className={`rounded-lg border border-gray-200 bg-gray-50 p-8 text-center ${className}`}>
-        <FileCode className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-600">No files to display</p>
+      <div
+        className={cn(
+          'rounded-lg border border-border bg-muted/40 p-8 text-center',
+          className
+        )}
+      >
+        <FileCode className="mx-auto mb-4 size-12 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">No files to display</p>
       </div>
     );
   }
 
   return (
-    <div className={`rounded-lg border border-gray-200 bg-white overflow-hidden ${className}`}>
-      {/* Header */}
+    <div
+      className={cn(
+        'overflow-hidden rounded-lg border border-border bg-card text-card-foreground',
+        className
+      )}
+    >
       {title && (
-        <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
-          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        <div className="border-b border-border bg-muted/30 px-4 py-3">
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         </div>
       )}
 
-      {/* File tabs */}
       {files.length > 1 && (
-        <div className="border-b border-gray-200 bg-gray-50">
+        <div className="border-b border-border bg-muted/20">
           <div className="flex overflow-x-auto">
             {files.map((file, index) => (
               <button
                 key={file.name}
+                type="button"
                 onClick={() => setActiveFileIndex(index)}
-                className={`
-                  flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
-                  ${
-                    index === activeFileIndex
-                      ? 'border-blue-600 text-blue-600 bg-white'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }
-                `}
+                className={cn(
+                  'flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+                  index === activeFileIndex
+                    ? 'border-primary bg-background text-primary'
+                    : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                )}
               >
-                <FileCode className="h-4 w-4" />
+                <FileCode className="size-4 shrink-0" />
                 <span>{file.name}</span>
                 {file.size && (
-                  <span className="text-xs text-gray-400">
-                    ({formatFileSize(file.size)})
-                  </span>
+                  <span className="text-xs text-muted-foreground">({formatFileSize(file.size)})</span>
                 )}
               </button>
             ))}
@@ -136,19 +142,16 @@ export function CodeViewer({
         </div>
       )}
 
-      {/* File info bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <span className={`text-xs font-medium ${getLanguageColor(activeFile.language)}`}>
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/25 px-4 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={cn('text-xs font-medium', getLanguageColor(activeFile.language))}>
             {activeFile.language.toUpperCase()}
           </span>
           {activeFile.path && (
-            <span className="text-xs text-gray-500">
-              {activeFile.path}
-            </span>
+            <span className="truncate text-xs text-muted-foreground">{activeFile.path}</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
@@ -157,12 +160,12 @@ export function CodeViewer({
           >
             {copiedFile === activeFile.name ? (
               <>
-                <Check className="h-3 w-3 mr-1" />
+                <Check className="mr-1 size-3" />
                 Copied
               </>
             ) : (
               <>
-                <Copy className="h-3 w-3 mr-1" />
+                <Copy className="mr-1 size-3" />
                 Copy
               </>
             )}
@@ -173,19 +176,15 @@ export function CodeViewer({
             onClick={() => handleDownload(activeFile)}
             className="h-7 text-xs"
           >
-            <Download className="h-3 w-3 mr-1" />
+            <Download className="mr-1 size-3" />
             Download
           </Button>
         </div>
       </div>
 
-      {/* Code content */}
-      <div
-        className="overflow-auto bg-gray-900"
-        style={{ maxHeight }}
-      >
+      <div className={cn('overflow-auto bg-zinc-950', maxHeightClassName)}>
         <pre className="p-4 text-sm">
-          <code className="text-gray-100 font-mono">
+          <code className="font-mono text-zinc-100">
             {showLineNumbers ? (
               <LineNumberedCode content={activeFile.content} />
             ) : (
@@ -207,7 +206,7 @@ function LineNumberedCode({ content }: { content: string }) {
   return (
     <div className="flex">
       {/* Line numbers */}
-      <div className="select-none pr-4 text-right text-gray-500 border-r border-gray-700">
+      <div className="select-none border-r border-border pr-4 text-right text-xs text-muted-foreground">
         {lines.map((_, index) => (
           <div key={index} className="leading-6">
             {index + 1}

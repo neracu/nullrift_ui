@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useState, useRef } from "react";
-import { Copy, Settings } from "lucide-react";
+import { useCallback, useEffect, useState, useRef } from "react";
+import { Copy, Eye, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { AiAssistant } from "@/components/dashboard/ai-assistant";
+import { AiAssistant, type AiAssistantHandle } from "@/components/dashboard/ai-assistant";
 import { PromptInput } from "@/components/builder/prompt-input";
 import { GenerationLoading } from "@/components/builder/generation-loading";
 import { GenerationError } from "@/components/builder/generation-error";
@@ -15,6 +15,13 @@ import { TuningPanel } from "@/components/builder/tuning-panel";
 import { ExportModal } from "@/components/builder/export-modal";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Card,
   CardContent,
@@ -34,9 +41,11 @@ import {
   BUILDER_SECTION_IDS,
   scrollToBuilderSection,
 } from "@/lib/builder-nav";
+import { cn } from "@/lib/utils";
 import type { ComponentSchema } from "@/lib/watsonx/types";
 
 type BuilderPhase = "idle" | "loading" | "error" | "success";
+type BuilderOutputView = "preview" | "code";
 
 interface GenerateErrorJson {
   error?: string;
@@ -63,21 +72,6 @@ const BUILDER_SHORTCUTS_FOR_MODAL: KeyboardShortcut[] = [
   { ...COMMON_SHORTCUTS.HELP, action: noopShortcutAction },
 ];
 
-function phaseLabel(phase: BuilderPhase): string {
-  switch (phase) {
-    case "idle":
-      return "Ready";
-    case "loading":
-      return "Generating";
-    case "error":
-      return "Error";
-    case "success":
-      return "Ready to export";
-    default:
-      return "—";
-  }
-}
-
 /**
  * Client-side builder: prompt → POST /api/generate → interactive preview with code display.
  */
@@ -88,8 +82,10 @@ export function BuilderClient() {
   const [currentSchema, setCurrentSchema] = useState<ComponentSchema | null>(null);
   const [currentCode, setCurrentCode] = useState<string>("");
   const [showTuningPanel, setShowTuningPanel] = useState(false);
+  const [outputView, setOutputView] = useState<BuilderOutputView>("preview");
   const [showExportModal, setShowExportModal] = useState(false);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  const [librarySheetOpen, setLibrarySheetOpen] = useState(false);
   const [lastPrompt, setLastPrompt] = useState<string>("");
   const [errorState, setErrorState] = useState<{
     error: string;
@@ -99,6 +95,13 @@ export function BuilderClient() {
   } | null>(null);
 
   const promptInputRef = useRef<HTMLTextAreaElement>(null);
+  const assistantRef = useRef<AiAssistantHandle>(null);
+
+  useEffect(() => {
+    if (phase === "success") {
+      setOutputView("preview");
+    }
+  }, [phase]);
 
   const runGenerate = useCallback(async (prompt: string) => {
     setLastPrompt(prompt);
@@ -180,16 +183,18 @@ export function BuilderClient() {
   }, [currentCode]);
 
   const handleSidebarWorkspace = useCallback(() => {
-    scrollToBuilderSection(BUILDER_SECTION_IDS.workspace);
-  }, []);
-
-  const handleSidebarGenerate = useCallback(() => {
     scrollToBuilderSection(BUILDER_SECTION_IDS.generate);
-    requestAnimationFrame(() => promptInputRef.current?.focus());
-  }, []);
+    requestAnimationFrame(() => {
+      if (phase === "success") {
+        assistantRef.current?.focusFollowUp();
+      } else {
+        promptInputRef.current?.focus();
+      }
+    });
+  }, [phase]);
 
   const handleSidebarLibrary = useCallback(() => {
-    scrollToBuilderSection(BUILDER_SECTION_IDS.library);
+    setLibrarySheetOpen(true);
   }, []);
 
   const handleSidebarExport = useCallback(() => {
@@ -215,7 +220,11 @@ export function BuilderClient() {
       {
         ...COMMON_SHORTCUTS.FOCUS_PROMPT,
         action: () => {
-          promptInputRef.current?.focus();
+          if (phase === "success") {
+            assistantRef.current?.focusFollowUp();
+          } else {
+            promptInputRef.current?.focus();
+          }
         },
       },
       {
@@ -239,7 +248,6 @@ export function BuilderClient() {
       sidebar={
         <Sidebar
           onWorkspace={handleSidebarWorkspace}
-          onGenerate={handleSidebarGenerate}
           onExport={handleSidebarExport}
           onLibrary={handleSidebarLibrary}
           onSettings={() => setShortcutsModalOpen(true)}
@@ -252,6 +260,21 @@ export function BuilderClient() {
         onOpenChange={setShortcutsModalOpen}
       />
 
+      <Sheet open={librarySheetOpen} onOpenChange={setLibrarySheetOpen}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
+          <SheetHeader className="space-y-1 text-left">
+            <SheetTitle>Library</SheetTitle>
+            <SheetDescription>Saved components will appear here.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 flex-1">
+            <p className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
+              No saved components yet. Generate from the prompt in the main view, then we&apos;ll
+              add persistence here.
+            </p>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <motion.div
         className="relative flex min-h-0 flex-1 flex-col bg-background text-foreground"
         initial="hidden"
@@ -259,93 +282,63 @@ export function BuilderClient() {
         variants={pageTransition}
       >
         <SidebarTrigger className="fixed left-4 top-4 z-40 md:hidden" aria-label="Open menu" />
-        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-12 pt-14 md:px-8 md:pt-6">
-          <section
-            id={BUILDER_SECTION_IDS.workspace}
-            className="mb-8 scroll-mt-24 space-y-6 lg:scroll-mt-8"
-          >
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                Builder
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-                Describe a UI in plain language, preview it live, then tune or export.
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Session
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-semibold tabular-nums">Local</p>
-                  <CardDescription className="mt-1">In-browser workspace</CardDescription>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-semibold">{phaseLabel(phase)}</p>
-                  <CardDescription className="mt-1">Generation pipeline</CardDescription>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Export
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-semibold">
-                    {phase === "success" && currentSchema ? "Available" : "—"}
-                  </p>
-                  <CardDescription className="mt-1">ZIP / schema when ready</CardDescription>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
+        <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-4 pb-12 pt-14 md:px-8 md:pt-6">
           <section
             id={BUILDER_SECTION_IDS.generate}
-            className="scroll-mt-24 space-y-8 lg:scroll-mt-8"
+            className="flex min-h-0 flex-1 flex-col scroll-mt-24 lg:scroll-mt-8"
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Prompt</CardTitle>
-                <CardDescription>Natural language → generated React component</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PromptInput
-                  ref={promptInputRef}
-                  embedded
-                  onGenerate={(prompt) => void runGenerate(prompt)}
-                  isGenerating={phase === "loading"}
-                  disabled={phase === "loading"}
-                />
-              </CardContent>
-            </Card>
-
-            <div className="space-y-6">
-              <AnimatePresence mode="wait">
-                {phase === "loading" && (
-                  <motion.div
-                    key="loading"
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    variants={fadeIn}
-                  >
-                    <GenerationLoading onCancel={() => setPhase("idle")} />
-                  </motion.div>
+            {phase !== "success" ? (
+              <div
+                className={cn(
+                  "flex w-full flex-col items-center px-0 py-8",
+                  "min-h-[min(560px,calc(100svh-10rem))] flex-1 justify-center"
                 )}
+              >
+                <AnimatePresence mode="wait">
+                  {phase !== "loading" ? (
+                    <motion.div
+                      key="prompt-slot"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -12 }}
+                      transition={{ duration: 0.22 }}
+                      className="w-full max-w-3xl"
+                    >
+                      <Card className="w-full shadow-md">
+                        <CardHeader>
+                          <CardTitle className="text-lg">Prompt</CardTitle>
+                          <CardDescription>
+                            Natural language → generated React component
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <PromptInput
+                            ref={promptInputRef}
+                            embedded
+                            onGenerate={(prompt) => void runGenerate(prompt)}
+                            isGenerating={false}
+                          />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="loading-slot"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -12 }}
+                      transition={{ duration: 0.22 }}
+                      className="w-full max-w-3xl"
+                    >
+                      <GenerationLoading onCancel={() => setPhase("idle")} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : null}
 
+            <div className={cn("w-full space-y-6", phase !== "success" && "mt-8")}>
+              <AnimatePresence mode="wait">
                 {phase === "error" && errorState && (
                   <motion.div
                     key="error"
@@ -377,13 +370,43 @@ export function BuilderClient() {
                       variants={fadeIn}
                       className="space-y-6"
                     >
-                      <div className="flex justify-end">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div
+                          className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-1"
+                          role="group"
+                          aria-label="Switch between preview and generated code"
+                        >
+                          <Button
+                            type="button"
+                            variant={outputView === "preview" ? "secondary" : "ghost"}
+                            size="icon"
+                            className="size-9 shrink-0"
+                            aria-label="Show interactive preview"
+                            aria-pressed={outputView === "preview"}
+                            onClick={() => setOutputView("preview")}
+                          >
+                            <Eye className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={outputView === "code" ? "secondary" : "ghost"}
+                            size="icon"
+                            className="size-9 shrink-0 font-mono text-sm font-bold leading-none"
+                            aria-label="Show generated code"
+                            aria-pressed={outputView === "code"}
+                            onClick={() => setOutputView("code")}
+                          >
+                            <span aria-hidden className="select-none">
+                              &lt;&gt;
+                            </span>
+                          </Button>
+                        </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => setShowTuningPanel(!showTuningPanel)}
-                          className="gap-2"
+                          className="gap-2 self-end sm:self-auto"
                         >
                           <Settings className="h-4 w-4" />
                           {showTuningPanel ? "Hide" : "Show"} tuning
@@ -393,12 +416,8 @@ export function BuilderClient() {
                       <div
                         className={`grid gap-6 ${showTuningPanel ? "lg:grid-cols-[1fr_380px]" : "grid-cols-1"}`}
                       >
-                        <div className="space-y-6">
-                          <motion.div
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.05 }}
-                          >
+                        <div className="relative min-h-[min(420px,50vh)] space-y-6">
+                          <div className={cn(outputView === "preview" ? "block" : "hidden")}>
                             <PreviewCanvas
                               schema={currentSchema}
                               code={currentCode}
@@ -414,15 +433,10 @@ export function BuilderClient() {
                                   description: error.message,
                                 });
                               }}
-                              onExport={() => setShowExportModal(true)}
                             />
-                          </motion.div>
+                          </div>
 
-                          <motion.div
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                          >
+                          <div className={cn(outputView === "code" ? "block" : "hidden")}>
                             <Card>
                               <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
                                 <div>
@@ -465,7 +479,7 @@ export function BuilderClient() {
                                 </Tabs>
                               </CardContent>
                             </Card>
-                          </motion.div>
+                          </div>
                         </div>
 
                         <AnimatePresence>
@@ -493,24 +507,6 @@ export function BuilderClient() {
               </AnimatePresence>
             </div>
           </section>
-
-          <section
-            id={BUILDER_SECTION_IDS.library}
-            className="mt-12 scroll-mt-24 lg:scroll-mt-8"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Library</CardTitle>
-                <CardDescription>Saved components will appear here.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
-                  No saved components yet. Generate one above, then we&apos;ll add persistence
-                  here.
-                </p>
-              </CardContent>
-            </Card>
-          </section>
         </div>
 
         {currentSchema && (
@@ -522,9 +518,11 @@ export function BuilderClient() {
         )}
 
         <AiAssistant
+          ref={assistantRef}
           phase={phase}
           onRegenerate={() => lastPrompt && void runGenerate(lastPrompt)}
           onExport={() => setShowExportModal(true)}
+          onFollowUpGenerate={(prompt) => void runGenerate(prompt)}
         />
       </motion.div>
     </DashboardLayout>

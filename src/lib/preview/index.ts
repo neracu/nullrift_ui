@@ -15,7 +15,6 @@ export type {
   RendererProps,
   PreviewFrameProps,
   PreviewControlsProps,
-  PreviewToolbarProps,
   IframeMessage,
   IframeMessageType,
   StateChangeListener,

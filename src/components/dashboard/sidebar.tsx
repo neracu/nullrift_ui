@@ -46,7 +46,6 @@ import { formatShortcut } from '@/hooks/use-keyboard-shortcuts';
 
 export interface BuilderSidebarActions {
   onWorkspace: () => void;
-  onGenerate: () => void;
   onExport: () => void;
   onLibrary: () => void;
   onSettings: () => void;
@@ -76,7 +75,6 @@ const navGroupContentIconModeClass =
 export function Sidebar({
   className,
   onWorkspace,
-  onGenerate,
   onExport,
   onLibrary,
   onSettings,
@@ -117,17 +115,6 @@ export function Sidebar({
                 >
                   <LayoutDashboard className={navIconClass} />
                   <span>{BUILDER_LABELS.workspace}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem className={navItemIconModeClass}>
-                <SidebarMenuButton
-                  type="button"
-                  className={navButtonCollapsedClass}
-                  onClick={() => run(onGenerate)}
-                  tooltip="Focus prompt"
-                >
-                  <Sparkles className={navIconClass} />
-                  <span>{BUILDER_LABELS.generate}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem className={navItemIconModeClass}>
