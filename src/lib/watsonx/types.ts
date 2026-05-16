@@ -49,9 +49,14 @@ export interface StylingConfig {
   theme?: 'light' | 'dark' | 'system';
   primaryColor?: string;
   secondaryColor?: string;
+  /** Hex background for the preview form surface */
+  backgroundColor?: string;
+  /** Hex body text for the preview form */
+  textColor?: string;
   borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   spacing?: 'compact' | 'normal' | 'relaxed';
   fontFamily?: string;
+  fontSize?: 'sm' | 'base' | 'lg';
   customClasses?: string[];
 }
 

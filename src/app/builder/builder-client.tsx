@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Settings } from "lucide-react";
 import { PromptInput } from "@/components/builder/prompt-input";
 import { GenerationLoading } from "@/components/builder/generation-loading";
 import { GenerationError } from "@/components/builder/generation-error";
 import { PreviewCanvas } from "@/components/builder/preview-canvas";
+import { TuningPanel } from "@/components/builder/tuning-panel";
 import { Button } from "@/components/ui/button";
 import type { ComponentSchema } from "@/lib/watsonx/types";
 
@@ -34,6 +35,9 @@ export function BuilderClient() {
   const [phase, setPhase] = useState<BuilderPhase>("idle");
   const [generatedCode, setGeneratedCode] = useState<string>("");
   const [generatedSchema, setGeneratedSchema] = useState<ComponentSchema | null>(null);
+  const [currentSchema, setCurrentSchema] = useState<ComponentSchema | null>(null);
+  const [currentCode, setCurrentCode] = useState<string>("");
+  const [showTuningPanel, setShowTuningPanel] = useState(false);
   const [lastPrompt, setLastPrompt] = useState<string>("");
   const [errorState, setErrorState] = useState<{
     error: string;
@@ -74,6 +78,9 @@ export function BuilderClient() {
       if (okBody.success === true && typeof okBody.code === "string" && okBody.schema) {
         setGeneratedCode(okBody.code);
         setGeneratedSchema(okBody.schema);
+        setCurrentSchema(okBody.schema);
+        setCurrentCode(okBody.code);
+        setShowTuningPanel(false); // Reset tuning panel on new generation
         setPhase("success");
         return;
       }
@@ -143,39 +150,69 @@ export function BuilderClient() {
             />
           )}
 
-          {phase === "success" && generatedCode && generatedSchema && (
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Interactive Preview */}
-              <PreviewCanvas
-                schema={generatedSchema}
-                code={generatedCode}
-                onSubmit={(data) => {
-                  console.log('Form submitted:', data);
-                }}
-                onError={(error) => {
-                  console.error('Preview error:', error);
-                }}
-              />
-
-              {/* Generated Code */}
-              <div className="rounded-xl border border-white/10 bg-black/30 p-4 shadow-inner sm:p-6">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-medium text-muted-foreground sm:text-base">Generated Code</h2>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="border-white/20"
-                    onClick={() => void navigator.clipboard.writeText(generatedCode)}
-                  >
-                    Copy
-                  </Button>
-                </div>
-                <pre className="max-h-[min(70vh,720px)] overflow-auto rounded-lg bg-black/50 p-4 text-left text-xs leading-relaxed text-emerald-100/90 sm:text-sm">
-                  <code>{generatedCode}</code>
-                </pre>
+          {phase === "success" && generatedCode && generatedSchema && currentSchema && (
+            <>
+              {/* Tuning Toggle Button */}
+              <div className="mb-4 flex justify-end">
+                <Button
+                  variant="glass-blue"
+                  size="sm"
+                  onClick={() => setShowTuningPanel(!showTuningPanel)}
+                  className="gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  {showTuningPanel ? 'Hide' : 'Show'} Tuning Panel
+                </Button>
               </div>
-            </div>
+
+              <div className={`grid gap-6 ${showTuningPanel ? 'lg:grid-cols-[1fr_400px]' : 'lg:grid-cols-2'}`}>
+                <div className="space-y-6">
+                  {/* Interactive Preview */}
+                  <PreviewCanvas
+                    schema={currentSchema}
+                    code={currentCode}
+                    onSubmit={(data) => {
+                      console.log('Form submitted:', data);
+                    }}
+                    onError={(error) => {
+                      console.error('Preview error:', error);
+                    }}
+                  />
+
+                  {/* Generated Code */}
+                  <div className="rounded-xl border border-white/10 bg-black/30 p-4 shadow-inner sm:p-6">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <h2 className="text-sm font-medium text-muted-foreground sm:text-base">Generated Code</h2>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="border-white/20"
+                        onClick={() => void navigator.clipboard.writeText(currentCode)}
+                      >
+                        Copy
+                      </Button>
+                    </div>
+                    <pre className="max-h-[min(70vh,720px)] overflow-auto rounded-lg bg-black/50 p-4 text-left text-xs leading-relaxed text-emerald-100/90 sm:text-sm">
+                      <code>{currentCode}</code>
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Tuning Panel */}
+                {showTuningPanel && (
+                  <div className="lg:sticky lg:top-4 lg:h-[calc(100vh-8rem)]">
+                    <TuningPanel
+                      schema={generatedSchema}
+                      code={generatedCode}
+                      onSchemaChange={setCurrentSchema}
+                      onCodeChange={setCurrentCode}
+                      onClose={() => setShowTuningPanel(false)}
+                    />
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </main>

@@ -5,10 +5,53 @@
  * Handles form state, validation, and user interactions.
  */
 
-import React, { type ReactElement, type FormEvent } from 'react';
+import React, { type ReactElement, type FormEvent, type CSSProperties } from 'react';
 import type { ComponentSchema, FieldDefinition } from '../watsonx/types';
 import type { RendererProps, PreviewTheme } from './types';
 import { cn } from '../utils';
+
+/** Focus ring uses `--preview-primary` set on the preview form. */
+const PREVIEW_FOCUS_RING =
+  'focus:outline-none focus:ring-2 focus:ring-[color:var(--preview-primary)]';
+
+const BORDER_RADIUS_TAILWIND: Record<
+  NonNullable<ComponentSchema['styling']['borderRadius']>,
+  string
+> = {
+  none: 'rounded-none',
+  sm: 'rounded-sm',
+  md: 'rounded-md',
+  lg: 'rounded-lg',
+  xl: 'rounded-xl',
+  '2xl': 'rounded-2xl',
+  full: 'rounded-full',
+};
+
+/**
+ * Resolves schema.styling (including tuning overrides) for the live preview.
+ */
+function resolvePreviewStyling(schema: ComponentSchema) {
+  const s = schema.styling ?? {};
+  const br = s.borderRadius ?? 'md';
+
+  let fontFamilyClass = 'font-sans';
+  if (s.fontFamily === 'serif') fontFamilyClass = 'font-serif';
+  else if (s.fontFamily === 'mono') fontFamilyClass = 'font-mono';
+
+  let fontSizeClass = 'text-base';
+  if (s.fontSize === 'sm') fontSizeClass = 'text-sm';
+  else if (s.fontSize === 'lg') fontSizeClass = 'text-lg';
+
+  return {
+    primaryColor: s.primaryColor ?? '#3b82f6',
+    secondaryColor: s.secondaryColor ?? '#ec4899',
+    backgroundColor: s.backgroundColor,
+    textColor: s.textColor,
+    borderRadiusClass: BORDER_RADIUS_TAILWIND[br] ?? 'rounded-md',
+    fontFamilyClass,
+    fontSizeClass,
+  };
+}
 
 /**
  * Main Dynamic Renderer Component
@@ -44,8 +87,10 @@ export function DynamicRenderer({
     );
   });
 
+  const spacing = schema.styling?.spacing ?? 'normal';
+
   // Apply layout
-  const layoutElement = applyLayout(fieldElements, schema.layout);
+  const layoutElement = applyLayout(fieldElements, schema.layout, spacing);
 
   // Apply styling and wrap in form
   return createFormWrapper(
@@ -125,7 +170,7 @@ function createInputField(
 ): ReactElement {
   const inputClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors',
-    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    PREVIEW_FOCUS_RING,
     theme === 'dark'
       ? 'bg-slate-900 border-slate-700 text-slate-100'
       : 'bg-white border-slate-300 text-slate-900',
@@ -181,7 +226,7 @@ function createTextareaField(
 ): ReactElement {
   const textareaClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors resize-y',
-    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    PREVIEW_FOCUS_RING,
     theme === 'dark'
       ? 'bg-slate-900 border-slate-700 text-slate-100'
       : 'bg-white border-slate-300 text-slate-900',
@@ -237,7 +282,7 @@ function createSelectField(
 ): ReactElement {
   const selectClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors',
-    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    PREVIEW_FOCUS_RING,
     theme === 'dark'
       ? 'bg-slate-900 border-slate-700 text-slate-100'
       : 'bg-white border-slate-300 text-slate-900',
@@ -309,8 +354,8 @@ function createCheckboxField(
           type="checkbox"
           checked={checked}
           className={cn(
-            'w-4 h-4 rounded border transition-colors',
-            'focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'w-4 h-4 rounded border transition-colors accent-[color:var(--preview-secondary)]',
+            PREVIEW_FOCUS_RING,
             theme === 'dark'
               ? 'bg-slate-900 border-slate-700'
               : 'bg-white border-slate-300',
@@ -376,8 +421,8 @@ function createRadioField(
                 value={option.value}
                 checked={value === option.value}
                 className={cn(
-                  'w-4 h-4 border transition-colors',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500',
+                  'w-4 h-4 border transition-colors accent-[color:var(--preview-secondary)]',
+                  PREVIEW_FOCUS_RING,
                   theme === 'dark'
                     ? 'bg-slate-900 border-slate-700'
                     : 'bg-white border-slate-300'
@@ -424,7 +469,7 @@ function createDateField(
 ): ReactElement {
   const inputClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors',
-    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    PREVIEW_FOCUS_RING,
     theme === 'dark'
       ? 'bg-slate-900 border-slate-700 text-slate-100'
       : 'bg-white border-slate-300 text-slate-900',
@@ -479,7 +524,7 @@ function createFileField(
 ): ReactElement {
   const inputClasses = cn(
     'w-full px-3 py-2 rounded-md border transition-colors',
-    'focus:outline-none focus:ring-2 focus:ring-blue-500',
+    PREVIEW_FOCUS_RING,
     'file:mr-4 file:py-1 file:px-3 file:rounded file:border-0',
     'file:text-sm file:font-medium',
     theme === 'dark'
@@ -530,31 +575,36 @@ function createFileField(
  */
 function applyLayout(
   fieldElements: (ReactElement | null)[],
-  layout: ComponentSchema['layout']
+  layout: ComponentSchema['layout'],
+  spacing: 'compact' | 'normal' | 'relaxed' = 'normal'
 ): ReactElement {
   const validFields = fieldElements.filter(Boolean);
+  const stackGap =
+    spacing === 'compact' ? 'space-y-2' : spacing === 'relaxed' ? 'space-y-6' : 'space-y-4';
+  const gridGap =
+    spacing === 'compact' ? 'gap-2' : spacing === 'relaxed' ? 'gap-6' : 'gap-4';
 
   switch (layout) {
     case 'single-column':
-      return <div className="space-y-4">{validFields}</div>;
+      return <div className={stackGap}>{validFields}</div>;
 
     case 'two-column':
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={cn('grid grid-cols-1 md:grid-cols-2', gridGap)}>
           {validFields}
         </div>
       );
 
     case 'grid':
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={cn('grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3', gridGap)}>
           {validFields}
         </div>
       );
 
     case 'custom':
     default:
-      return <div className="space-y-4">{validFields}</div>;
+      return <div className={stackGap}>{validFields}</div>;
   }
 }
 
@@ -569,30 +619,43 @@ function createFormWrapper(
 ): ReactElement {
   const { styling } = schema;
   const spacing = styling.spacing || 'normal';
-  
+  const ps = resolvePreviewStyling(schema);
+
   const spacingClasses = {
     compact: 'p-4',
     normal: 'p-6',
     relaxed: 'p-8'
   };
 
+  const bgOverride = Boolean(ps.backgroundColor);
+  const textOverride = Boolean(ps.textColor);
+
+  const formStyle: CSSProperties = {
+    ['--preview-primary' as string]: ps.primaryColor,
+    ['--preview-secondary' as string]: ps.secondaryColor,
+    ...(bgOverride && ps.backgroundColor ? { backgroundColor: ps.backgroundColor } : {}),
+  };
+
   const formClasses = cn(
-    'w-full max-w-2xl mx-auto rounded-lg border',
+    'w-full max-w-2xl mx-auto border',
+    ps.borderRadiusClass,
+    ps.fontFamilyClass,
+    ps.fontSizeClass,
     spacingClasses[spacing],
-    theme === 'dark'
-      ? 'bg-slate-900 border-slate-800'
-      : 'bg-white border-slate-200'
+    !bgOverride &&
+      (theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200')
   );
 
   return (
-    <form onSubmit={onSubmit} className={formClasses} noValidate>
+    <form onSubmit={onSubmit} className={formClasses} style={formStyle} noValidate>
       {/* Form Title */}
       {schema.name && (
         <h2
           className={cn(
             'text-2xl font-semibold mb-6',
-            theme === 'dark' ? 'text-slate-100' : 'text-slate-900'
+            !textOverride && (theme === 'dark' ? 'text-slate-100' : 'text-slate-900')
           )}
+          style={textOverride && ps.textColor ? { color: ps.textColor } : undefined}
         >
           {schema.name}
         </h2>
@@ -603,8 +666,13 @@ function createFormWrapper(
         <p
           className={cn(
             'text-sm mb-6',
-            theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
+            !textOverride && (theme === 'dark' ? 'text-slate-400' : 'text-slate-600')
           )}
+          style={
+            textOverride && ps.textColor
+              ? { color: ps.textColor, opacity: 0.88 }
+              : undefined
+          }
         >
           {schema.description}
         </p>
@@ -617,12 +685,12 @@ function createFormWrapper(
       <div className="mt-6">
         <button
           type="submit"
+          style={{ backgroundColor: ps.primaryColor }}
           className={cn(
-            'w-full px-4 py-2 rounded-md font-medium transition-colors',
-            'focus:outline-none focus:ring-2 focus:ring-offset-2',
-            theme === 'dark'
-              ? 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
-              : 'bg-blue-500 hover:bg-blue-600 text-white focus:ring-blue-500'
+            'w-full px-4 py-2 rounded-md font-medium transition-opacity',
+            'text-white hover:opacity-90 active:opacity-80',
+            'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2',
+            theme === 'dark' ? 'focus:ring-offset-slate-900' : 'focus:ring-offset-white'
           )}
         >
           Submit

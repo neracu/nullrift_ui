@@ -45,9 +45,12 @@ const StylingConfigSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']).optional(),
   primaryColor: z.string().optional(),
   secondaryColor: z.string().optional(),
+  backgroundColor: z.string().optional(),
+  textColor: z.string().optional(),
   borderRadius: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl', 'full']).optional(),
   spacing: z.enum(['compact', 'normal', 'relaxed']).optional(),
   fontFamily: z.string().optional(),
+  fontSize: z.enum(['sm', 'base', 'lg']).optional(),
   customClasses: z.array(z.string()).optional()
 });
 
