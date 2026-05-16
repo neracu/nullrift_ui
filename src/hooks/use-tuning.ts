@@ -28,6 +28,7 @@ import {
   migrateLegacyBehaviorSettings,
   validationConfigToBehaviorSettings,
 } from '@/lib/tuning/behavior-schema';
+import { generateCode } from '@/lib/generator/code-builder';
 import { StyleTransformer } from '@/lib/tuning/style-transformer';
 import { StructureEditor } from '@/lib/tuning/structure-editor';
 import { mergeFieldPartial } from '@/lib/tuning/merge-field-partial';
@@ -281,16 +282,11 @@ export function useTuning(
         );
       }
 
-      // Update code
-      const updatedCode = styleTransformer.updateComponentCode(
-        initialCode,
-        newState.styleOverrides
-      );
-
-      setCurrentSchema(applyBehaviorToSchema(updatedSchema, newState.behaviorSettings));
-      setCurrentCode(updatedCode);
+      const finalSchema = applyBehaviorToSchema(updatedSchema, newState.behaviorSettings);
+      setCurrentSchema(finalSchema);
+      setCurrentCode(generateCode(finalSchema).component);
     },
-    [initialSchema, initialCode, styleTransformer, structureEditor]
+    [initialSchema, styleTransformer, structureEditor]
   );
 
   /**

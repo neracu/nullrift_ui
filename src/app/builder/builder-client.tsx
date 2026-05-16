@@ -188,11 +188,13 @@ export function BuilderClient() {
     }
   }, [lastPrompt, runGenerate]);
 
-  const handleCopyCode = useCallback(() => {
-    if (currentCode) {
-      navigator.clipboard.writeText(currentCode);
-      toast.success("Code copied to clipboard!");
+  const handleCopyCode = useCallback((text?: string) => {
+    const payload = text ?? currentCode;
+    if (!payload?.trim()) {
+      return;
     }
+    void navigator.clipboard.writeText(payload);
+    toast.success("Code copied to clipboard!");
   }, [currentCode]);
 
   const handleSidebarWorkspace = useCallback(() => {

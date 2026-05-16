@@ -9,6 +9,7 @@ import {
   type ComponentSchema,
   type FieldDefinition,
   type PropDefinition,
+  type StylingConfig,
   DEFAULT_SUBMIT_BUTTON_LABEL,
 } from '../watsonx/types';
 
@@ -41,22 +42,63 @@ export class CodeBuilder {
    * Generate imports based on component needs
    */
   private generateImports(schema: ComponentSchema): string {
-    const imports: string[] = [
-      `import React, { useState } from 'react';`
-    ];
+    return `import React, { useState } from 'react';`;
+  }
 
-    // Add form-related imports if needed
-    if (schema.fields.length > 0) {
-      imports.push(`import { useForm } from 'react-hook-form';`);
-    }
+  /** Whether the field has any validation rule we emit into generated code. */
+  private fieldHasValidators(field: FieldDefinition): boolean {
+    const v = field.validation;
+    if (!v) return false;
+    return !!(v.required || v.minLength != null || v.maxLength != null || v.pattern);
+  }
 
-    // Add icon imports if needed
-    const needsIcons = schema.fields.some(f => f.type === 'checkbox' || f.type === 'radio');
-    if (needsIcons) {
-      imports.push(`import { Check, X } from 'lucide-react';`);
-    }
+  /** Tailwind `rounded-*` literals for JIT (no dynamic class names). */
+  private resolveRoundedClass(
+    radius: StylingConfig['borderRadius'] | undefined,
+    fallback: 'md' | 'lg' = 'lg'
+  ): string {
+    const r = radius ?? fallback;
+    const map: Record<string, string> = {
+      none: 'rounded-none',
+      sm: 'rounded-sm',
+      md: 'rounded-md',
+      lg: 'rounded-lg',
+      xl: 'rounded-xl',
+      '2xl': 'rounded-2xl',
+      full: 'rounded-full',
+    };
+    return map[r] ?? map[fallback]!;
+  }
 
-    return imports.join('\n');
+  /** Primary submit background: explicit Tailwind utilities only. */
+  private resolvePrimaryButtonClasses(schema: ComponentSchema): string {
+    const raw = schema.styling.primaryColor?.trim().toLowerCase();
+    const hexMap: Record<string, string> = {
+      '#3b82f6': 'bg-blue-600 hover:bg-blue-700',
+      '#2563eb': 'bg-blue-600 hover:bg-blue-700',
+      '#1d4ed8': 'bg-blue-700 hover:bg-blue-800',
+      '#10b981': 'bg-emerald-600 hover:bg-emerald-700',
+      '#059669': 'bg-emerald-600 hover:bg-emerald-700',
+      '#8b5cf6': 'bg-violet-600 hover:bg-violet-700',
+      '#7c3aed': 'bg-violet-600 hover:bg-violet-700',
+      '#f97316': 'bg-orange-500 hover:bg-orange-600',
+      '#ef4444': 'bg-red-500 hover:bg-red-600',
+      '#64748b': 'bg-slate-600 hover:bg-slate-700',
+    };
+    if (raw && hexMap[raw]) return hexMap[raw];
+    const tokenMap: Record<string, string> = {
+      'blue-500': 'bg-blue-500 hover:bg-blue-600',
+      'blue-600': 'bg-blue-600 hover:bg-blue-700',
+      'emerald-500': 'bg-emerald-500 hover:bg-emerald-600',
+      'emerald-600': 'bg-emerald-600 hover:bg-emerald-700',
+      'violet-500': 'bg-violet-500 hover:bg-violet-600',
+      'violet-600': 'bg-violet-600 hover:bg-violet-700',
+      'orange-500': 'bg-orange-500 hover:bg-orange-600',
+      'red-500': 'bg-red-500 hover:bg-red-600',
+      'slate-600': 'bg-slate-600 hover:bg-slate-700',
+    };
+    if (raw && tokenMap[raw]) return tokenMap[raw];
+    return 'bg-blue-600 hover:bg-blue-700';
   }
 
   /**
@@ -130,11 +172,14 @@ export class CodeBuilder {
     const handleSubmit = this.generateSubmitHandler(schema);
     const fields = this.generateFields(schema);
     const className = this.generateClassName(schema);
+    const validationBlock = validationRules ? `${validationRules}\n\n  ` : '';
+    const submitRounded = this.resolveRoundedClass(schema.styling.borderRadius, 'md');
+    const submitPrimary = this.resolvePrimaryButtonClasses(schema);
 
     return `export function ${schema.name}(props: ${schema.name}Props) {
   ${stateHooks}
 
-  ${handleSubmit}
+  ${validationBlock}${handleSubmit}
 
   return (
     <div className="${className}">
@@ -143,7 +188,7 @@ export class CodeBuilder {
         
         <button
           type="submit"
-          className="w-full px-4 py-2 bg-${schema.styling.primaryColor || 'blue-500'} text-white rounded-${schema.styling.borderRadius || 'md'} hover:opacity-90 transition-opacity"
+          className="w-full px-4 py-2 ${submitPrimary} text-white ${submitRounded} transition-colors duration-200"
         >
           {${JSON.stringify(schema.submitButtonLabel?.trim() || DEFAULT_SUBMIT_BUTTON_LABEL)}}
         </button>
@@ -201,25 +246,45 @@ export class CodeBuilder {
    */
   private generateValidationRules(schema: ComponentSchema): string {
     const rules = schema.fields
-      .filter(field => field.validation)
-      .map(field => {
+      .filter((field) => this.fieldHasValidators(field))
+      .map((field) => {
         const validation = field.validation!;
         const checks: string[] = [];
+        const msg = (fallback: string) =>
+          JSON.stringify(validation.message || fallback);
+        const id = field.id;
 
         if (validation.required) {
-          checks.push(`if (!formData.${field.id}) return '${validation.message || 'This field is required'}';`);
+          if (field.type === 'checkbox') {
+            checks.push(
+              `if (formData.${id} !== true) return ${msg('This field is required')};`
+            );
+          } else if (field.type === 'file') {
+            checks.push(`if (formData.${id} == null) return ${msg('This field is required')};`);
+          } else {
+            checks.push(
+              `if (typeof formData.${id} !== 'string' || !formData.${id}.trim()) return ${msg('This field is required')};`
+            );
+          }
         }
 
-        if (validation.minLength) {
-          checks.push(`if (formData.${field.id}.length < ${validation.minLength}) return 'Minimum length is ${validation.minLength}';`);
-        }
-
-        if (validation.maxLength) {
-          checks.push(`if (formData.${field.id}.length > ${validation.maxLength}) return 'Maximum length is ${validation.maxLength}';`);
-        }
-
-        if (validation.pattern) {
-          checks.push(`if (!/${validation.pattern}/.test(formData.${field.id})) return '${validation.message || 'Invalid format'}';`);
+        if (field.type !== 'checkbox' && field.type !== 'file') {
+          if (validation.minLength != null) {
+            checks.push(
+              `if (typeof formData.${id} === 'string' && formData.${id}.trim().length > 0 && formData.${id}.length < ${validation.minLength}) return 'Minimum length is ${validation.minLength}';`
+            );
+          }
+          if (validation.maxLength != null) {
+            checks.push(
+              `if (typeof formData.${id} === 'string' && formData.${id}.length > ${validation.maxLength}) return 'Maximum length is ${validation.maxLength}';`
+            );
+          }
+          if (validation.pattern) {
+            const pat = JSON.stringify(validation.pattern);
+            checks.push(
+              `if (typeof formData.${id} === 'string' && formData.${id}.trim() && !new RegExp(${pat}).test(formData.${id})) return ${msg('Invalid format')};`
+            );
+          }
         }
 
         if (checks.length === 0) return '';
@@ -230,34 +295,39 @@ export class CodeBuilder {
 
     if (rules.length === 0) return '';
 
-    return `const validators = {\n${rules.join(',\n')}\n  };`;
+    return `const validators = {\n${rules.join(',\n')}\n  } as const;`;
   }
 
   /**
    * Generate submit handler
    */
   private generateSubmitHandler(schema: ComponentSchema): string {
+    const validatedIds = schema.fields
+      .filter((f) => this.fieldHasValidators(f))
+      .map((f) => f.id);
+
+    const validationLoop =
+      validatedIds.length === 0
+        ? ''
+        : `  const keysWithValidators = [${validatedIds.map((id) => `'${id}'`).join(', ')}] as const;
+  for (const key of keysWithValidators) {
+    const err = validators[key]?.();
+    if (err) {
+      newErrors[key] = err;
+      hasErrors = true;
+    }
+  }
+`;
+
     return `const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form
     const newErrors: Partial<Record<keyof ${schema.name}FormData, string>> = {};
     let hasErrors = false;
-    
-    ${schema.fields.filter(f => f.validation).map(field => `
-    const ${field.id}Error = validate${this.capitalize(field.id)}(formData.${field.id});
-    if (${field.id}Error) {
-      newErrors.${field.id} = ${field.id}Error;
-      hasErrors = true;
-    }`).join('')}
-    
+${validationLoop}
     setErrors(newErrors);
-    
     if (hasErrors) return;
-    
-    // Submit form
     console.log('Form submitted:', formData);
-    ${schema.props.some(p => p.name === 'onSubmit') ? 'props.onSubmit?.(formData);' : ''}
+    ${schema.props.some((p) => p.name === 'onSubmit') ? 'props.onSubmit?.(formData);' : ''}
   };`;
   }
 
@@ -297,7 +367,7 @@ export class CodeBuilder {
             value={formData.${field.id}}
             onChange={(e) => setFormData({ ...formData, ${field.id}: e.target.value })}
             placeholder="${field.placeholder || ''}"
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           />
           {errors.${field.id} && (
             <p className="text-sm text-red-500">{errors.${field.id}}</p>
@@ -319,7 +389,7 @@ export class CodeBuilder {
             onChange={(e) => setFormData({ ...formData, ${field.id}: e.target.value })}
             placeholder="${field.placeholder || ''}"
             rows={4}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           />
           {errors.${field.id} && (
             <p className="text-sm text-red-500">{errors.${field.id}}</p>
@@ -340,7 +410,7 @@ export class CodeBuilder {
             id="${field.id}"
             value={formData.${field.id}}
             onChange={(e) => setFormData({ ...formData, ${field.id}: e.target.value })}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           >
             <option value="">Select an option</option>
             ${options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('\n            ')}
@@ -402,9 +472,13 @@ export class CodeBuilder {
    * Generate simple content for non-form components
    */
   private generateSimpleContent(schema: ComponentSchema): string {
+    const muted =
+      schema.styling.theme === 'dark'
+        ? 'text-slate-400'
+        : 'text-slate-600 dark:text-slate-400';
     return `<div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">{props.title || '${schema.name}'}</h2>
-        <p className="text-gray-600">{props.description || '${schema.description}'}</p>
+        <h2 className="mb-2 text-2xl font-bold">{props.title || '${schema.name}'}</h2>
+        <p className="${muted}">{props.description || '${schema.description}'}</p>
       </div>`;
   }
 
@@ -424,8 +498,7 @@ export class CodeBuilder {
       classes.push('bg-white text-gray-900');
     }
     
-    // Border radius
-    classes.push(`rounded-${schema.styling.borderRadius || 'lg'}`);
+    classes.push(this.resolveRoundedClass(schema.styling.borderRadius, 'lg'));
     
     // Spacing
     if (schema.styling.spacing === 'compact') {
