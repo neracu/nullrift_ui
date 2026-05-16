@@ -6,7 +6,7 @@
  */
 
 import type { ComponentSchema, FieldDefinition } from '../watsonx/types';
-import type { PreviewState, StateChangeListener, ValidationResult, DEFAULT_PREVIEW_STATE } from './types';
+import type { PreviewState, StateChangeListener, ValidationResult } from './types';
 
 /**
  * Preview State Manager Class
@@ -37,7 +37,7 @@ export class PreviewStateManager {
     const defaultState: PreviewState = {
       mode: 'schema',
       viewport: 'desktop',
-      theme: 'light',
+      theme: 'dark',
       zoom: 100,
       formData: {},
       errors: {},

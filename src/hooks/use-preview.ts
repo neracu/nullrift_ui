@@ -266,7 +266,7 @@ export function usePreview(
  */
 export function usePreviewControls(initialViewport: ViewportSize = 'desktop') {
   const [viewport, setViewport] = useState<ViewportSize>(initialViewport);
-  const [theme, setTheme] = useState<PreviewTheme>('light');
+  const [theme, setTheme] = useState<PreviewTheme>('dark');
   const [zoom, setZoom] = useState<number>(100);
 
   const increaseZoom = useCallback(() => {
@@ -287,7 +287,7 @@ export function usePreviewControls(initialViewport: ViewportSize = 'desktop') {
 
   const reset = useCallback(() => {
     setViewport(initialViewport);
-    setTheme('light');
+    setTheme('dark');
     setZoom(100);
   }, [initialViewport]);
 
