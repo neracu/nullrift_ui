@@ -92,24 +92,24 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
         : EXAMPLE_PROMPTS.filter((ex) => ex.category === selectedCategory);
 
     const shellClass = embedded
-      ? 'rounded-lg border border-border bg-muted/20 p-4'
+      ? 'rounded-none border-0 bg-transparent p-0'
       : 'glass rounded-2xl p-6 shadow-2xl border border-white/10';
 
     const inner = (
       <>
-        <div className="mb-4 flex items-center justify-between">
-          <label htmlFor="prompt" className="text-sm font-medium text-muted-foreground">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <label htmlFor="prompt" className="text-sm font-medium text-foreground/80">
             Describe your component
           </label>
           <button
             type="button"
             onClick={() => setShowExamples(!showExamples)}
-            className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-primary transition-colors hover:bg-muted"
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-border/60 bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/50 hover:text-foreground"
           >
-            <Wand2 className="h-4 w-4" />
-            Example Prompts
+            <Wand2 className="h-3.5 w-3.5 shrink-0 text-primary/80" />
+            Examples
             <ChevronDown
-              className={`h-4 w-4 transition-transform ${showExamples ? 'rotate-180' : ''}`}
+              className={`h-3.5 w-3.5 shrink-0 opacity-70 transition-transform ${showExamples ? 'rotate-180' : ''}`}
             />
           </button>
         </div>
@@ -173,18 +173,18 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Example: Create a contact form with name, email, phone, and message fields. Include validation and a submit button with loading state."
             disabled={isGenerating || disabled}
-            className="max-h-[300px] min-h-[120px] w-full resize-none rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            rows={4}
+            className="max-h-[min(52vh,420px)] min-h-[148px] w-full resize-none rounded-xl border border-border/60 bg-muted/20 px-5 py-4 text-[15px] leading-relaxed text-foreground shadow-inner placeholder:text-muted-foreground/70 focus-visible:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[168px] sm:text-base"
+            rows={5}
           />
 
-          <div className="absolute bottom-3 right-3 flex items-center gap-2">
+          <div className="pointer-events-none absolute bottom-3.5 right-4">
             <span
-              className={`text-xs ${
+              className={`text-[11px] tabular-nums tracking-tight ${
                 prompt.length < MIN_LENGTH
                   ? 'text-muted-foreground'
                   : prompt.length > MAX_LENGTH
                     ? 'text-destructive'
-                    : 'text-emerald-500'
+                    : 'text-emerald-600 dark:text-emerald-400'
               }`}
             >
               {prompt.length} / {MAX_LENGTH}
@@ -215,20 +215,24 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
           )}
         </AnimatePresence>
 
-        <div className="mt-6 flex items-center justify-between gap-4">
-          <p className="text-xs text-muted-foreground">
-            Press{' '}
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘</kbd>{' '}
-            +{' '}
-            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">Enter</kbd>{' '}
-            to generate
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <p className="text-[11px] text-muted-foreground sm:text-xs">
+            <span className="text-muted-foreground/80">Press </span>
+            <kbd className="rounded-md border border-border/70 bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-foreground/90">
+              ⌘
+            </kbd>
+            <span className="text-muted-foreground/80"> + </span>
+            <kbd className="rounded-md border border-border/70 bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-foreground/90">
+              Enter
+            </kbd>
+            <span className="text-muted-foreground/80"> to generate</span>
           </p>
 
           <button
             type="button"
             onClick={handleSubmit}
             disabled={!isValid || isGenerating || disabled}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 sm:px-7"
           >
             {isGenerating ? (
               <>
@@ -244,25 +248,15 @@ export const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProp
           </button>
         </div>
 
-        <div className="mt-6 border-t border-border pt-6">
-          <h3 className="mb-3 text-sm font-medium text-foreground">Tips</h3>
-          <ul className="space-y-2 text-xs text-muted-foreground">
-            <li className="flex gap-2">
-              <span className="text-primary">•</span>
-              <span>Be specific about field types, validation rules, and styling preferences</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-primary">•</span>
-              <span>Mention special features like password strength or conditional fields</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-primary">•</span>
-              <span>Specify theme (light/dark) and color preferences when relevant</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-primary">•</span>
-              <span>Include accessibility or responsive requirements</span>
-            </li>
+        <div className="mt-7 border-t border-border/40 pt-6">
+          <p className="mb-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
+            Quick guide
+          </p>
+          <ul className="grid gap-x-6 gap-y-2 text-[11px] leading-snug text-muted-foreground sm:grid-cols-2 sm:text-xs">
+            <li>Field types, validation, and styling preferences</li>
+            <li>Password rules, conditional fields, special UX</li>
+            <li>Light/dark theme and palette when it matters</li>
+            <li>Accessibility and responsive breakpoints</li>
           </ul>
         </div>
       </>

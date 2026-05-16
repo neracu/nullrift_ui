@@ -6,7 +6,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Eye, Settings } from 'lucide-react';
+import { Copy, Eye, Code, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -182,14 +182,12 @@ export function BuilderSuccessWorkspace({
             type="button"
             variant={outputView === 'code' ? 'secondary' : 'ghost'}
             size="icon"
-            className="size-9 shrink-0 font-mono text-sm font-bold leading-none"
+            className="size-9 shrink-0"
             aria-label="Show generated code"
             aria-pressed={outputView === 'code'}
             onClick={() => onOutputViewChange('code')}
           >
-            <span aria-hidden className="select-none">
-              &lt;&gt;
-            </span>
+            <Code className="size-4" aria-hidden />
           </Button>
         </div>
         <Button

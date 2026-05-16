@@ -319,16 +319,18 @@ export function BuilderClient() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -12 }}
                       transition={{ duration: 0.22 }}
-                      className="w-full max-w-3xl"
+                      className="w-full max-w-4xl"
                     >
-                      <Card className="w-full shadow-md">
-                        <CardHeader>
-                          <CardTitle className="text-lg">Prompt</CardTitle>
-                          <CardDescription>
+                      <Card className="w-full overflow-hidden rounded-2xl border border-border/50 bg-card/90 shadow-sm ring-1 ring-border/30 backdrop-blur-sm">
+                        <CardHeader className="space-y-1.5 border-b border-border/40 bg-muted/15 px-6 py-5 sm:px-8 sm:py-6">
+                          <CardTitle className="text-xl font-semibold tracking-tight">
+                            Prompt
+                          </CardTitle>
+                          <CardDescription className="text-sm leading-relaxed text-muted-foreground">
                             Natural language → generated React component
                           </CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-6 pb-7 pt-5 sm:px-9 sm:pb-8 sm:pt-6">
                           <PromptInput
                             ref={promptInputRef}
                             embedded
@@ -345,7 +347,7 @@ export function BuilderClient() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -12 }}
                       transition={{ duration: 0.22 }}
-                      className="w-full max-w-3xl"
+                      className="w-full max-w-4xl"
                     >
                       <GenerationLoading onCancel={() => setPhase("idle")} />
                     </motion.div>
