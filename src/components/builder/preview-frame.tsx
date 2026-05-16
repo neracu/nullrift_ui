@@ -24,6 +24,7 @@ export function PreviewFrame({
   code,
   state,
   onFieldChange,
+  onFieldBlur,
   onSubmit,
   onReady,
   onError,
@@ -57,7 +58,6 @@ export function PreviewFrame({
 
   // Handle form submission
   const handleSubmit = (data: Record<string, any>) => {
-    console.log('Form submitted:', data);
     onSubmit(data);
   };
 
@@ -128,6 +128,7 @@ export function PreviewFrame({
               errors={state.errors}
               theme={effectiveTheme}
               onFieldChange={onFieldChange}
+              onFieldBlur={onFieldBlur}
               onSubmit={handleSubmit}
               canvasMode={canvasMode}
               selectedFieldIds={selectedFieldIds}

@@ -9,6 +9,7 @@ import JSZip from 'jszip';
 import type { ComponentSchema } from '@/lib/watsonx/types';
 import type { TuningState } from '@/types/tuning';
 import { normalizeFieldAdditionEntries } from '@/types/tuning';
+import { applyBehaviorToSchema } from '@/lib/tuning/behavior-schema';
 import { StructureEditor } from '@/lib/tuning/structure-editor';
 import { reconcileFieldOrderWithSchema, resolveFieldInsertIndex } from '@/lib/tuning/field-insert';
 import type {
@@ -137,7 +138,7 @@ export class ExportManager {
     schema: ComponentSchema,
     tuningState: TuningState
   ): ComponentSchema {
-    const { styleOverrides, structureChanges, behaviorSettings } = tuningState;
+    const { styleOverrides, structureChanges } = tuningState;
 
     // Clone schema to avoid mutations
     const tunedSchema: ComponentSchema = JSON.parse(JSON.stringify(schema));
@@ -214,14 +215,7 @@ export class ExportManager {
       tunedSchema.layout = working.layout;
     }
 
-    // Apply behavior settings
-    if (behaviorSettings && tunedSchema.validation) {
-      if (behaviorSettings.validationMode) {
-        tunedSchema.validation.showErrors = behaviorSettings.validationMode;
-      }
-    }
-
-    return tunedSchema;
+    return applyBehaviorToSchema(tunedSchema, tuningState.behaviorSettings);
   }
 
   /**

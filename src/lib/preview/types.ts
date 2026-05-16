@@ -92,6 +92,9 @@ export interface PreviewProps {
   /** Callback when form is submitted */
   onSubmit?: (data: Record<string, any>) => void;
 
+  /** Blur callback for preview validation timing */
+  onFieldBlur?: (fieldId: string) => void;
+
   /** Design vs interact preview */
   canvasMode?: PreviewCanvasMode;
 
@@ -129,6 +132,9 @@ export interface RendererProps {
   
   /** Callback when field value changes */
   onFieldChange: (fieldId: string, value: any) => void;
+
+  /** Callback when a field loses focus (blur-driven validation). */
+  onFieldBlur?: (fieldId: string) => void;
   
   /** Callback when form is submitted */
   onSubmit: (data: Record<string, any>) => void;
@@ -163,6 +169,8 @@ export interface PreviewFrameProps {
   
   /** Callback when field changes */
   onFieldChange: (fieldId: string, value: any) => void;
+
+  onFieldBlur?: (fieldId: string) => void;
   
   /** Callback when form submits */
   onSubmit: (data: Record<string, any>) => void;

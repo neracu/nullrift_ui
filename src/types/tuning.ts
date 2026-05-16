@@ -113,22 +113,28 @@ export interface StructureChanges {
 }
 
 /**
- * Behavior configuration options
+ * Behavior configuration options (mirrors ComponentSchema.validation after merge).
  */
 export interface BehaviorSettings {
-  /** When to validate fields */
+  /** When to validate fields → validation.showErrors */
   validationMode?: 'onBlur' | 'onChange' | 'onSubmit';
-  
-  /** Show validation errors inline */
-  showErrorsInline?: boolean;
-  
-  /** Auto-focus first field on mount */
+
+  /** Where to show field errors → validation.errorPosition */
+  errorPosition?: 'below' | 'inline' | 'tooltip';
+
+  /** Scroll first invalid field into view after submit with errors */
+  scrollToFirstErrorOnSubmit?: boolean;
+
+  /** Debounce (ms) for onChange validation → validation.validateDebounceMs */
+  validateDebounceMs?: 0 | 150 | 300;
+
+  /** Auto-focus first field on mount → validation.autoFocus */
   autoFocus?: boolean;
-  
-  /** Submit form on Enter key */
+
+  /** Submit form on Enter in single-line inputs → validation.submitOnEnter */
   submitOnEnter?: boolean;
-  
-  /** Show required field indicators */
+
+  /** Asterisk on required labels → validation.showRequiredIndicators */
   showRequiredIndicators?: boolean;
 }
 
@@ -476,6 +482,24 @@ export const VALIDATION_MODE_OPTIONS = [
 ] as const;
 
 /**
+ * Debounce options for onChange validation (ms)
+ */
+export const VALIDATION_DEBOUNCE_OPTIONS = [
+  { label: 'Off', value: 0 as const },
+  { label: '150 ms', value: 150 as const },
+  { label: '300 ms', value: 300 as const },
+] as const;
+
+/**
+ * Error placement (maps to ValidationConfig.errorPosition)
+ */
+export const ERROR_POSITION_OPTIONS = [
+  { label: 'Below field', value: 'below' as const },
+  { label: 'Inline label', value: 'inline' as const },
+  { label: 'Tooltip', value: 'tooltip' as const },
+] as const;
+
+/**
  * Default tuning state
  */
 export const DEFAULT_TUNING_STATE: TuningState = {
@@ -489,7 +513,9 @@ export const DEFAULT_TUNING_STATE: TuningState = {
   },
   behaviorSettings: {
     validationMode: 'onBlur',
-    showErrorsInline: true,
+    errorPosition: 'below',
+    scrollToFirstErrorOnSubmit: false,
+    validateDebounceMs: 300,
     autoFocus: false,
     submitOnEnter: true,
     showRequiredIndicators: true,

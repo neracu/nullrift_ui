@@ -9,6 +9,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ComponentSchema } from '@/lib/watsonx/types';
 import { PreviewStateManager } from '@/lib/preview/state-manager';
 import type { PreviewState, ViewportSize, PreviewTheme, RenderMode } from '@/lib/preview/types';
+import { resolveValidationConfig } from '@/lib/tuning/behavior-schema';
 
 /**
  * Hook options
@@ -60,6 +61,9 @@ export interface UsePreviewReturn {
   
   /** Clear specific field error */
   clearFieldError: (fieldId: string) => void;
+
+  /** Notify manager that a field lost focus (blur validation). */
+  blurField: (fieldId: string) => void;
   
   /** Reset form to initial state */
   reset: () => void;
@@ -192,6 +196,10 @@ export function usePreview(
     stateManagerRef.current?.clearFieldError(fieldId);
   }, []);
 
+  const blurField = useCallback((fieldId: string) => {
+    stateManagerRef.current?.blurField(fieldId);
+  }, []);
+
   /**
    * Reset form to initial state
    */
@@ -203,13 +211,34 @@ export function usePreview(
    * Submit form
    */
   const submit = useCallback(() => {
-    const isValid = validateAll();
-    
+    const manager = stateManagerRef.current;
+    const isValid = manager?.validateAll() ?? false;
+
     if (isValid && onSubmit) {
-      const formData = stateManagerRef.current?.getFormData() ?? {};
+      const formData = manager?.getFormData() ?? {};
       onSubmit(formData);
+      return;
     }
-  }, [validateAll, onSubmit]);
+
+    if (!isValid && onValidationError) {
+      const errors = manager?.getErrors() ?? {};
+      onValidationError(errors);
+    }
+
+    if (!isValid && manager) {
+      const cfg = resolveValidationConfig(schema);
+      if (cfg.scrollToFirstError) {
+        const fieldId = manager.getFirstInvalidFieldIdInOrder();
+        if (fieldId && typeof document !== 'undefined') {
+          queueMicrotask(() => {
+            document
+              .querySelector(`[data-preview-field="${fieldId}"]`)
+              ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          });
+        }
+      }
+    }
+  }, [schema, onSubmit, onValidationError]);
 
   /**
    * Get form data
@@ -250,6 +279,7 @@ export function usePreview(
     validateAll,
     clearErrors,
     clearFieldError,
+    blurField,
     reset,
     submit,
     getFormData,

@@ -57,7 +57,12 @@ const StylingConfigSchema = z.object({
 const ValidationConfigSchema = z.object({
   onSubmit: z.enum(['validate', 'submit']).optional(),
   showErrors: z.enum(['onBlur', 'onChange', 'onSubmit']).optional(),
-  errorPosition: z.enum(['below', 'inline', 'tooltip']).optional()
+  errorPosition: z.enum(['below', 'inline', 'tooltip']).optional(),
+  scrollToFirstError: z.boolean().optional(),
+  validateDebounceMs: z.union([z.literal(0), z.literal(150), z.literal(300)]).optional(),
+  showRequiredIndicators: z.boolean().optional(),
+  autoFocus: z.boolean().optional(),
+  submitOnEnter: z.boolean().optional(),
 });
 
 const StateDefinitionSchema = z.object({

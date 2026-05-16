@@ -68,6 +68,13 @@ export interface ValidationConfig {
   onSubmit?: 'validate' | 'submit';
   showErrors?: 'onBlur' | 'onChange' | 'onSubmit';
   errorPosition?: 'below' | 'inline' | 'tooltip';
+  /** After failed submit, scroll first invalid field into view */
+  scrollToFirstError?: boolean;
+  /** Debounce for live validation when showErrors is onChange */
+  validateDebounceMs?: 0 | 150 | 300;
+  showRequiredIndicators?: boolean;
+  autoFocus?: boolean;
+  submitOnEnter?: boolean;
 }
 
 export interface StateDefinition {

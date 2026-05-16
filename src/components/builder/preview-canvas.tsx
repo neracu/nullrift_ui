@@ -37,9 +37,6 @@ export function PreviewCanvas({
     initialState,
     onStateChange,
     onSubmit,
-    onValidationError: (errors) => {
-      console.log('Validation errors:', errors);
-    },
   });
 
   return (
@@ -77,6 +74,7 @@ export function PreviewCanvas({
           code={code}
           state={preview.state}
           onFieldChange={preview.updateField}
+          onFieldBlur={preview.blurField}
           onSubmit={preview.submit}
           onError={onError}
           canvasMode={canvasMode}

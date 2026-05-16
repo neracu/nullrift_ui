@@ -19,6 +19,11 @@ import type {
   FieldAdditionEntry,
 } from '@/types/tuning';
 import { DEFAULT_TUNING_STATE, normalizeFieldAdditionEntries } from '@/types/tuning';
+import {
+  applyBehaviorToSchema,
+  migrateLegacyBehaviorSettings,
+  validationConfigToBehaviorSettings,
+} from '@/lib/tuning/behavior-schema';
 import { StyleTransformer } from '@/lib/tuning/style-transformer';
 import { StructureEditor } from '@/lib/tuning/structure-editor';
 import { mergeFieldPartial } from '@/lib/tuning/merge-field-partial';
@@ -51,6 +56,7 @@ export function useTuning(
   const normalizeTuningStateShape = useCallback((s: TuningState): TuningState => {
     return {
       ...s,
+      behaviorSettings: migrateLegacyBehaviorSettings(s.behaviorSettings ?? {}),
       structureChanges: {
         ...DEFAULT_TUNING_STATE.structureChanges,
         ...s.structureChanges,
@@ -59,11 +65,18 @@ export function useTuning(
     };
   }, []);
 
+  const seedBehaviorSettings = migrateLegacyBehaviorSettings({
+    ...DEFAULT_TUNING_STATE.behaviorSettings,
+    ...validationConfigToBehaviorSettings(initialSchema.validation),
+    ...initialState?.behaviorSettings,
+  });
+
   // Initialize state
   const [state, setState] = useState<TuningState>(() => {
     const baseState = normalizeTuningStateShape({
       ...DEFAULT_TUNING_STATE,
       componentId: initialSchema.id,
+      behaviorSettings: seedBehaviorSettings,
       ...initialState,
       structureChanges: {
         ...DEFAULT_TUNING_STATE.structureChanges,
@@ -84,6 +97,10 @@ export function useTuning(
             return normalizeTuningStateShape({
               ...baseState,
               ...parsed,
+              behaviorSettings: migrateLegacyBehaviorSettings({
+                ...baseState.behaviorSettings,
+                ...(parsed.behaviorSettings ?? {}),
+              }),
               structureChanges: {
                 ...baseState.structureChanges,
                 ...parsed.structureChanges,
@@ -102,7 +119,9 @@ export function useTuning(
     return baseState;
   });
 
-  const [currentSchema, setCurrentSchema] = useState(initialSchema);
+  const [currentSchema, setCurrentSchema] = useState(() =>
+    applyBehaviorToSchema(initialSchema, seedBehaviorSettings)
+  );
   const [currentCode, setCurrentCode] = useState(initialCode);
 
   // Save to localStorage when state changes
@@ -229,7 +248,7 @@ export function useTuning(
         newState.styleOverrides
       );
 
-      setCurrentSchema(updatedSchema);
+      setCurrentSchema(applyBehaviorToSchema(updatedSchema, newState.behaviorSettings));
       setCurrentCode(updatedCode);
     },
     [initialSchema, initialCode, styleTransformer, structureEditor]
@@ -549,9 +568,9 @@ export function useTuning(
       };
 
       setState(newState);
-      // Behavior changes don't affect schema/code directly
+      applyChanges(newState);
     },
-    [state, addToHistory]
+    [state, addToHistory, applyChanges]
   );
 
   /**
@@ -615,7 +634,7 @@ export function useTuning(
     };
 
     setState(resetState);
-    setCurrentSchema(initialSchema);
+    setCurrentSchema(applyBehaviorToSchema(initialSchema, resetState.behaviorSettings));
     setCurrentCode(initialCode);
   }, [initialSchema, initialCode]);
 

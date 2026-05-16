@@ -7,6 +7,7 @@
 
 import type { ComponentSchema, FieldDefinition } from '../watsonx/types';
 import type { PreviewState, StateChangeListener, ValidationResult } from './types';
+import { resolveValidationConfig } from '@/lib/tuning/behavior-schema';
 
 /**
  * Preview State Manager Class
@@ -80,34 +81,73 @@ export class PreviewStateManager {
   }
 
   /**
-   * Update a single field value
+   * Update a single field value (validation timing follows schema.validation.showErrors).
    */
   updateField(fieldId: string, value: any): void {
-    const field = this.schema.fields.find(f => f.id === fieldId);
+    const field = this.schema.fields.find((f) => f.id === fieldId);
     if (!field) {
       console.warn(`Field ${fieldId} not found in schema`);
       return;
     }
 
-    // Update form data
     this.state.formData[fieldId] = value;
 
-    // Clear existing validation timeout
     const existingTimeout = this.validationTimeouts.get(fieldId);
     if (existingTimeout) {
       clearTimeout(existingTimeout);
+      this.validationTimeouts.delete(fieldId);
     }
 
-    // Debounce validation (300ms)
-    const timeout = setTimeout(() => {
-      this.validateField(fieldId);
-      this.validationTimeouts.delete(fieldId);
-    }, 300);
+    const { showErrors, validateDebounceMs } = resolveValidationConfig(this.schema);
 
-    this.validationTimeouts.set(fieldId, timeout);
+    if (showErrors === 'onChange') {
+      const ms = validateDebounceMs;
+      if (ms === 0) {
+        this.validateField(fieldId);
+      } else {
+        const timeout = setTimeout(() => {
+          this.validateField(fieldId);
+          this.validationTimeouts.delete(fieldId);
+        }, ms);
+        this.validationTimeouts.set(fieldId, timeout);
+      }
+    } else if (showErrors === 'onBlur' || showErrors === 'onSubmit') {
+      delete this.state.errors[fieldId];
+    }
 
-    // Notify listeners immediately for responsive UI
     this.notifyListeners();
+  }
+
+  /**
+   * Run validation for one field (e.g. on blur when showErrors is onBlur/onChange).
+   */
+  blurField(fieldId: string): void {
+    const field = this.schema.fields.find((f) => f.id === fieldId);
+    if (!field) return;
+
+    const existingTimeout = this.validationTimeouts.get(fieldId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      this.validationTimeouts.delete(fieldId);
+    }
+
+    const { showErrors } = resolveValidationConfig(this.schema);
+    if (showErrors === 'onBlur' || showErrors === 'onChange') {
+      this.validateField(fieldId);
+    }
+
+    this.notifyListeners();
+  }
+
+  /**
+   * First field id with an error, in schema field order (visible / non-conditional skipped same as validateAll).
+   */
+  getFirstInvalidFieldIdInOrder(): string | null {
+    for (const field of this.schema.fields) {
+      if (field.conditional && !this.shouldShowField(field)) continue;
+      if (this.state.errors[field.id]) return field.id;
+    }
+    return null;
   }
 
   /**

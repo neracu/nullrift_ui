@@ -23,6 +23,16 @@ import type { RendererProps, PreviewTheme } from './types';
 import { cn, formatSchemaDisplayName } from '../utils';
 import { getContrastForegroundForHex } from '@/lib/tuning/color-contrast';
 import { DesignFieldRow } from '@/components/builder/design-field-row';
+import { resolveValidationConfig } from '@/lib/tuning/behavior-schema';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+/** Preview-only field UI options (from schema.validation). */
+interface PreviewFieldCtx {
+  errorPosition: 'below' | 'inline' | 'tooltip';
+  showRequiredIndicators: boolean;
+  onFieldBlur?: (fieldId: string) => void;
+  autoFocusFirst: boolean;
+}
 
 /** Focus ring uses `--preview-primary` set on the preview form. */
 const PREVIEW_FOCUS_RING =
@@ -136,6 +146,21 @@ function layoutContainerClass(
 }
 
 /**
+ * Check if conditional field should be shown
+ */
+function shouldShowField(
+  field: FieldDefinition,
+  formData: Record<string, any>
+): boolean {
+  if (!field.conditional) return true;
+
+  const { field: conditionField, value: conditionValue } = field.conditional;
+  const actualValue = formData[conditionField];
+
+  return actualValue === conditionValue;
+}
+
+/**
  * Main Dynamic Renderer Component
  *
  * Renders a component from schema with full interactivity
@@ -146,6 +171,7 @@ export function DynamicRenderer({
   errors,
   theme,
   onFieldChange,
+  onFieldBlur,
   onSubmit,
   onValidationError: _unusedValidation,
   canvasMode = 'interact',
@@ -155,6 +181,26 @@ export function DynamicRenderer({
   onCycleFieldColSpan,
 }: RendererProps): ReactElement {
   const selectedSet = useMemo(() => new Set(selectedFieldIds), [selectedFieldIds]);
+
+  const vCfg = useMemo(() => resolveValidationConfig(schema), [schema]);
+
+  const firstInteractiveFieldId = useMemo(() => {
+    if (canvasMode === 'design') return undefined;
+    const first = schema.fields.find(
+      (f) => !f.conditional || shouldShowField(f, formData)
+    );
+    return first?.id;
+  }, [schema.fields, formData, canvasMode]);
+
+  const fieldCtx: PreviewFieldCtx = useMemo(
+    () => ({
+      errorPosition: vCfg.errorPosition,
+      showRequiredIndicators: vCfg.showRequiredIndicators,
+      onFieldBlur,
+      autoFocusFirst: vCfg.autoFocus,
+    }),
+    [vCfg.errorPosition, vCfg.showRequiredIndicators, vCfg.autoFocus, onFieldBlur]
+  );
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -191,7 +237,16 @@ export function DynamicRenderer({
 
   const buildFieldInner = (field: FieldDefinition) => (
     <div className="space-y-2">
-      {createFieldElement(field, formData, errors, theme, onFieldChange, textColorOverride)}
+      {createFieldElement(
+        field,
+        formData,
+        errors,
+        theme,
+        onFieldChange,
+        textColorOverride,
+        fieldCtx,
+        false
+      )}
     </div>
   );
 
@@ -238,31 +293,63 @@ export function DynamicRenderer({
       if (field.conditional && !shouldShowField(field, formData)) {
         return null;
       }
+      const autoFocusThis =
+        canvasMode !== 'design' &&
+        field.id === firstInteractiveFieldId &&
+        fieldCtx.autoFocusFirst;
       return (
-        <div key={field.id} className={cn('space-y-2', fieldColSpanClass(schema.layout, field.layout?.colSpan))}>
-          {createFieldElement(field, formData, errors, theme, onFieldChange, textColorOverride)}
+        <div
+          key={field.id}
+          data-preview-field={field.id}
+          className={cn('space-y-2', fieldColSpanClass(schema.layout, field.layout?.colSpan))}
+        >
+          {createFieldElement(
+            field,
+            formData,
+            errors,
+            theme,
+            onFieldChange,
+            textColorOverride,
+            fieldCtx,
+            autoFocusThis
+          )}
         </div>
       );
     });
     layoutElement = applyLayout(fieldElements, schema.layout, spacing);
   }
 
-  return createFormWrapper(layoutElement, schema, theme, handleSubmit, canvasMode === 'design');
+  return createFormWrapper(
+    layoutElement,
+    schema,
+    theme,
+    handleSubmit,
+    canvasMode === 'design',
+    vCfg.submitOnEnter
+  );
 }
 
 /**
- * Check if conditional field should be shown
+ * Wrap control for tooltip error display (Radix Tooltip; requires TooltipProvider ancestor).
  */
-function shouldShowField(
-  field: FieldDefinition,
-  formData: Record<string, any>
-): boolean {
-  if (!field.conditional) return true;
-
-  const { field: conditionField, value: conditionValue } = field.conditional;
-  const actualValue = formData[conditionField];
-
-  return actualValue === conditionValue;
+function wrapTooltipControl(
+  error: string | undefined,
+  errorPosition: PreviewFieldCtx['errorPosition'],
+  node: ReactElement
+): ReactElement {
+  if (errorPosition !== 'tooltip' || !error) return node;
+  return (
+    <Tooltip open={Boolean(error)} delayDuration={0}>
+      <TooltipTrigger asChild>{node}</TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        className="max-w-xs border border-red-600 bg-red-950 text-xs text-red-100"
+        role="alert"
+      >
+        {error}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 /**
@@ -274,7 +361,9 @@ function createFieldElement(
   errors: Record<string, string>,
   theme: PreviewTheme,
   onFieldChange: (fieldId: string, value: any) => void,
-  textColorOverride: boolean
+  textColorOverride: boolean,
+  ctx: PreviewFieldCtx,
+  autoFocus: boolean
 ): ReactElement {
   const value = formData[field.id] ?? '';
   const error = errors[field.id];
@@ -282,28 +371,106 @@ function createFieldElement(
 
   switch (field.type) {
     case 'input':
-      return createInputField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+      return createInputField(
+        field,
+        value,
+        error,
+        theme,
+        isRequired,
+        onFieldChange,
+        textColorOverride,
+        ctx,
+        autoFocus
+      );
 
     case 'textarea':
-      return createTextareaField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+      return createTextareaField(
+        field,
+        value,
+        error,
+        theme,
+        isRequired,
+        onFieldChange,
+        textColorOverride,
+        ctx,
+        autoFocus
+      );
 
     case 'select':
-      return createSelectField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+      return createSelectField(
+        field,
+        value,
+        error,
+        theme,
+        isRequired,
+        onFieldChange,
+        textColorOverride,
+        ctx,
+        autoFocus
+      );
 
     case 'checkbox':
-      return createCheckboxField(field, value, error, theme, onFieldChange, textColorOverride);
+      return createCheckboxField(
+        field,
+        value,
+        error,
+        theme,
+        isRequired,
+        onFieldChange,
+        textColorOverride,
+        ctx
+      );
 
     case 'radio':
-      return createRadioField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+      return createRadioField(
+        field,
+        value,
+        error,
+        theme,
+        isRequired,
+        onFieldChange,
+        textColorOverride,
+        ctx
+      );
 
     case 'date':
-      return createDateField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+      return createDateField(
+        field,
+        value,
+        error,
+        theme,
+        isRequired,
+        onFieldChange,
+        textColorOverride,
+        ctx,
+        autoFocus
+      );
 
     case 'file':
-      return createFileField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+      return createFileField(
+        field,
+        value,
+        error,
+        theme,
+        isRequired,
+        onFieldChange,
+        textColorOverride,
+        ctx,
+        autoFocus
+      );
 
     default:
-      return createInputField(field, value, error, theme, isRequired, onFieldChange, textColorOverride);
+      return createInputField(
+        field,
+        value,
+        error,
+        theme,
+        isRequired,
+        onFieldChange,
+        textColorOverride,
+        ctx,
+        autoFocus
+      );
   }
 }
 
@@ -317,10 +484,13 @@ function createInputField(
   theme: PreviewTheme,
   isRequired: boolean,
   onFieldChange: (fieldId: string, value: any) => void,
-  textColorOverride: boolean
+  textColorOverride: boolean,
+  ctx: PreviewFieldCtx,
+  autoFocus: boolean
 ): ReactElement {
+  const showReq = isRequired && ctx.showRequiredIndicators;
   const inputClasses = cn(
-    'w-full px-3 py-2 rounded-md border transition-colors',
+    'w-full px-3 py-2 rounded-md border transition-colors duration-200',
     PREVIEW_FOCUS_RING,
     theme === 'dark'
       ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500'
@@ -328,35 +498,70 @@ function createInputField(
     error && 'border-red-500 focus:ring-red-500'
   );
 
+  const inputEl = (
+    <input
+      id={field.id}
+      type="text"
+      value={value}
+      placeholder={field.placeholder}
+      className={inputClasses}
+      required={isRequired}
+      autoFocus={autoFocus}
+      onChange={(e) => onFieldChange(field.id, e.target.value)}
+      onBlur={() => ctx.onFieldBlur?.(field.id)}
+      aria-invalid={!!error}
+      aria-describedby={
+        error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
+      }
+    />
+  );
+
+  const wrapped = wrapTooltipControl(error, ctx.errorPosition, inputEl);
+
   return (
     <>
-      <label
-        htmlFor={field.id}
-        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
-      >
-        {field.label}
-        {isRequired && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      <input
-        id={field.id}
-        type="text"
-        value={value}
-        placeholder={field.placeholder}
-        className={inputClasses}
-        required={isRequired}
-        onChange={(e) => onFieldChange(field.id, e.target.value)}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${field.id}-error` : undefined}
-      />
-      {error && (
-        <p
-          id={`${field.id}-error`}
-          className="text-sm text-red-500 mt-1"
-          role="alert"
+      {ctx.errorPosition === 'inline' ? (
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <label
+            htmlFor={field.id}
+            className={previewStaticTextClass(
+              theme,
+              textColorOverride,
+              'cursor-default text-sm font-medium'
+            )}
+          >
+            {field.label}
+            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+          </label>
+          {error ? (
+            <span
+              id={`${field.id}-error`}
+              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+              role="alert"
+            >
+              {error}
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <label
+          htmlFor={field.id}
+          className={previewStaticTextClass(
+            theme,
+            textColorOverride,
+            'mb-1 block cursor-default text-sm font-medium'
+          )}
         >
+          {field.label}
+          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+        </label>
+      )}
+      {wrapped}
+      {ctx.errorPosition === 'below' && error ? (
+        <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
         </p>
-      )}
+      ) : null}
     </>
   );
 }
@@ -371,46 +576,84 @@ function createTextareaField(
   theme: PreviewTheme,
   isRequired: boolean,
   onFieldChange: (fieldId: string, value: any) => void,
-  textColorOverride: boolean
+  textColorOverride: boolean,
+  ctx: PreviewFieldCtx,
+  autoFocus: boolean
 ): ReactElement {
+  const showReq = isRequired && ctx.showRequiredIndicators;
   const textareaClasses = cn(
-    'w-full px-3 py-2 rounded-md border transition-colors resize-y',
+    'w-full resize-y rounded-md border px-3 py-2 transition-colors duration-200',
     PREVIEW_FOCUS_RING,
     theme === 'dark'
-      ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500'
-      : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400',
+      ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500'
+      : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400',
     error && 'border-red-500 focus:ring-red-500'
   );
 
+  const ta = (
+    <textarea
+      id={field.id}
+      value={value}
+      placeholder={field.placeholder}
+      className={textareaClasses}
+      required={isRequired}
+      rows={4}
+      autoFocus={autoFocus}
+      onChange={(e) => onFieldChange(field.id, e.target.value)}
+      onBlur={() => ctx.onFieldBlur?.(field.id)}
+      aria-invalid={!!error}
+      aria-describedby={
+        error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
+      }
+    />
+  );
+
+  const wrapped = wrapTooltipControl(error, ctx.errorPosition, ta);
+
   return (
     <>
-      <label
-        htmlFor={field.id}
-        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
-      >
-        {field.label}
-        {isRequired && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      <textarea
-        id={field.id}
-        value={value}
-        placeholder={field.placeholder}
-        className={textareaClasses}
-        required={isRequired}
-        rows={4}
-        onChange={(e) => onFieldChange(field.id, e.target.value)}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${field.id}-error` : undefined}
-      />
-      {error && (
-        <p
-          id={`${field.id}-error`}
-          className="text-sm text-red-500 mt-1"
-          role="alert"
+      {ctx.errorPosition === 'inline' ? (
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <label
+            htmlFor={field.id}
+            className={previewStaticTextClass(
+              theme,
+              textColorOverride,
+              'cursor-default text-sm font-medium'
+            )}
+          >
+            {field.label}
+            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+          </label>
+          {error ? (
+            <span
+              id={`${field.id}-error`}
+              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+              role="alert"
+            >
+              {error}
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <label
+          htmlFor={field.id}
+          className={previewStaticTextClass(
+            theme,
+            textColorOverride,
+            'mb-1 block cursor-default text-sm font-medium'
+          )}
         >
+          {field.label}
+          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+        </label>
+      )}
+      {wrapped}
+      {ctx.errorPosition === 'below' && error ? (
+        <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
         </p>
-      )}
+      ) : null}
     </>
   );
 }
@@ -425,55 +668,93 @@ function createSelectField(
   theme: PreviewTheme,
   isRequired: boolean,
   onFieldChange: (fieldId: string, value: any) => void,
-  textColorOverride: boolean
+  textColorOverride: boolean,
+  ctx: PreviewFieldCtx,
+  autoFocus: boolean
 ): ReactElement {
+  const showReq = isRequired && ctx.showRequiredIndicators;
   const selectClasses = cn(
-    'w-full px-3 py-2 rounded-md border transition-colors',
+    'w-full cursor-pointer rounded-md border px-3 py-2 transition-colors duration-200',
     PREVIEW_FOCUS_RING,
     theme === 'dark'
-      ? 'bg-slate-900 border-slate-700 text-slate-100'
-      : 'bg-white border-slate-300 text-slate-900',
+      ? 'border-slate-700 bg-slate-900 text-slate-100'
+      : 'border-slate-300 bg-white text-slate-900',
     error && 'border-red-500 focus:ring-red-500'
   );
 
+  const sel = (
+    <select
+      id={field.id}
+      value={value}
+      className={selectClasses}
+      required={isRequired}
+      autoFocus={autoFocus}
+      onChange={(e) => onFieldChange(field.id, e.target.value)}
+      onBlur={() => ctx.onFieldBlur?.(field.id)}
+      aria-invalid={!!error}
+      aria-describedby={
+        error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
+      }
+    >
+      {field.placeholder && (
+        <option value="" disabled>
+          {field.placeholder}
+        </option>
+      )}
+      {field.options?.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+
+  const wrapped = wrapTooltipControl(error, ctx.errorPosition, sel);
+
   return (
     <>
-      <label
-        htmlFor={field.id}
-        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
-      >
-        {field.label}
-        {isRequired && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      <select
-        id={field.id}
-        value={value}
-        className={selectClasses}
-        required={isRequired}
-        onChange={(e) => onFieldChange(field.id, e.target.value)}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${field.id}-error` : undefined}
-      >
-        {field.placeholder && (
-          <option value="" disabled>
-            {field.placeholder}
-          </option>
-        )}
-        {field.options?.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <p
-          id={`${field.id}-error`}
-          className="text-sm text-red-500 mt-1"
-          role="alert"
+      {ctx.errorPosition === 'inline' ? (
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <label
+            htmlFor={field.id}
+            className={previewStaticTextClass(
+              theme,
+              textColorOverride,
+              'cursor-default text-sm font-medium'
+            )}
+          >
+            {field.label}
+            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+          </label>
+          {error ? (
+            <span
+              id={`${field.id}-error`}
+              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+              role="alert"
+            >
+              {error}
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <label
+          htmlFor={field.id}
+          className={previewStaticTextClass(
+            theme,
+            textColorOverride,
+            'mb-1 block cursor-default text-sm font-medium'
+          )}
         >
+          {field.label}
+          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+        </label>
+      )}
+      {wrapped}
+      {ctx.errorPosition === 'below' && error ? (
+        <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
         </p>
-      )}
+      ) : null}
     </>
   );
 }
@@ -486,46 +767,70 @@ function createCheckboxField(
   value: any,
   error: string | undefined,
   theme: PreviewTheme,
+  isRequired: boolean,
   onFieldChange: (fieldId: string, value: any) => void,
-  textColorOverride: boolean
+  textColorOverride: boolean,
+  ctx: PreviewFieldCtx
 ): ReactElement {
   const checked = Boolean(value);
+  const showReq = isRequired && ctx.showRequiredIndicators;
+
+  const row = (
+    <div className="flex items-center gap-2">
+      <input
+        id={field.id}
+        type="checkbox"
+        checked={checked}
+        className={cn(
+          'h-4 w-4 rounded border transition-colors duration-200 accent-[color:var(--preview-secondary)]',
+          PREVIEW_FOCUS_RING,
+          theme === 'dark' ? 'border-slate-700 bg-slate-900' : 'border-slate-300 bg-white',
+          error && 'border-red-500'
+        )}
+        required={isRequired}
+        onChange={(e) => onFieldChange(field.id, e.target.checked)}
+        onBlur={() => ctx.onFieldBlur?.(field.id)}
+        aria-invalid={!!error}
+        aria-describedby={
+          error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
+        }
+      />
+      <label
+        htmlFor={field.id}
+        className={previewStaticTextClass(theme, textColorOverride, 'cursor-pointer text-sm font-medium')}
+      >
+        {field.label}
+        {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+      </label>
+    </div>
+  );
+
+  const wrappedRow =
+    ctx.errorPosition === 'tooltip' ? wrapTooltipControl(error, 'tooltip', row) : row;
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <input
-          id={field.id}
-          type="checkbox"
-          checked={checked}
-          className={cn(
-            'w-4 h-4 rounded border transition-colors accent-[color:var(--preview-secondary)]',
-            PREVIEW_FOCUS_RING,
-            theme === 'dark'
-              ? 'bg-slate-900 border-slate-700'
-              : 'bg-white border-slate-300',
-            error && 'border-red-500'
-          )}
-          onChange={(e) => onFieldChange(field.id, e.target.checked)}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${field.id}-error` : undefined}
-        />
-        <label
-          htmlFor={field.id}
-          className={previewStaticTextClass(theme, textColorOverride, 'text-sm font-medium')}
-        >
-          {field.label}
-        </label>
-      </div>
-      {error && (
-        <p
-          id={`${field.id}-error`}
-          className="text-sm text-red-500 mt-1"
-          role="alert"
-        >
+      {ctx.errorPosition === 'inline' ? (
+        <div className="flex items-center justify-between gap-2">
+          {wrappedRow}
+          {error ? (
+            <span
+              id={`${field.id}-error`}
+              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+              role="alert"
+            >
+              {error}
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        wrappedRow
+      )}
+      {ctx.errorPosition === 'below' && error ? (
+        <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
         </p>
-      )}
+      ) : null}
     </>
   );
 }
@@ -540,56 +845,87 @@ function createRadioField(
   theme: PreviewTheme,
   isRequired: boolean,
   onFieldChange: (fieldId: string, value: any) => void,
-  textColorOverride: boolean
+  textColorOverride: boolean,
+  ctx: PreviewFieldCtx
 ): ReactElement {
+  const showReq = isRequired && ctx.showRequiredIndicators;
+
+  const optionsBlock = (
+    <div className="space-y-2">
+      {field.options?.map((option) => (
+        <div key={option.value} className="flex items-center gap-2">
+          <input
+            id={`${field.id}-${option.value}`}
+            type="radio"
+            name={field.id}
+            value={option.value}
+            checked={value === option.value}
+            className={cn(
+              'h-4 w-4 border transition-colors duration-200 accent-[color:var(--preview-secondary)]',
+              PREVIEW_FOCUS_RING,
+              theme === 'dark' ? 'border-slate-700 bg-slate-900' : 'border-slate-300 bg-white'
+            )}
+            onChange={(e) => onFieldChange(field.id, e.target.value)}
+            onBlur={() => ctx.onFieldBlur?.(field.id)}
+            aria-invalid={!!error}
+          />
+          <label
+            htmlFor={`${field.id}-${option.value}`}
+            className={previewStaticTextClass(theme, textColorOverride, 'cursor-pointer text-sm')}
+          >
+            {option.label}
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+
+  const wrappedOptions =
+    ctx.errorPosition === 'tooltip' ? wrapTooltipControl(error, 'tooltip', optionsBlock) : optionsBlock;
+
   return (
-    <>
-      <fieldset>
+    <fieldset>
+      {ctx.errorPosition === 'inline' ? (
         <legend
-          className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-2')}
+          className={previewStaticTextClass(
+            theme,
+            textColorOverride,
+            'mb-2 flex w-full items-center justify-between gap-2 text-sm font-medium'
+          )}
+        >
+          <span>
+            {field.label}
+            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+          </span>
+          {error ? (
+            <span
+              id={`${field.id}-error`}
+              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+              role="alert"
+            >
+              {error}
+            </span>
+          ) : null}
+        </legend>
+      ) : (
+        <legend
+          className={previewStaticTextClass(
+            theme,
+            textColorOverride,
+            'mb-2 block text-sm font-medium'
+          )}
         >
           {field.label}
-          {isRequired && <span className="text-red-500 ml-1">*</span>}
+          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
         </legend>
-        <div className="space-y-2">
-          {field.options?.map((option) => (
-            <div key={option.value} className="flex items-center gap-2">
-              <input
-                id={`${field.id}-${option.value}`}
-                type="radio"
-                name={field.id}
-                value={option.value}
-                checked={value === option.value}
-                className={cn(
-                  'w-4 h-4 border transition-colors accent-[color:var(--preview-secondary)]',
-                  PREVIEW_FOCUS_RING,
-                  theme === 'dark'
-                    ? 'bg-slate-900 border-slate-700'
-                    : 'bg-white border-slate-300'
-                )}
-                onChange={(e) => onFieldChange(field.id, e.target.value)}
-                aria-invalid={!!error}
-              />
-              <label
-                htmlFor={`${field.id}-${option.value}`}
-                className={previewStaticTextClass(theme, textColorOverride, 'text-sm')}
-              >
-                {option.label}
-              </label>
-            </div>
-          ))}
-        </div>
-      </fieldset>
-      {error && (
-        <p
-          id={`${field.id}-error`}
-          className="text-sm text-red-500 mt-1"
-          role="alert"
-        >
+      )}
+      {wrappedOptions}
+      {ctx.errorPosition === 'below' && error ? (
+        <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
         </p>
-      )}
-    </>
+      ) : null}
+    </fieldset>
   );
 }
 
@@ -603,45 +939,83 @@ function createDateField(
   theme: PreviewTheme,
   isRequired: boolean,
   onFieldChange: (fieldId: string, value: any) => void,
-  textColorOverride: boolean
+  textColorOverride: boolean,
+  ctx: PreviewFieldCtx,
+  autoFocus: boolean
 ): ReactElement {
+  const showReq = isRequired && ctx.showRequiredIndicators;
   const inputClasses = cn(
-    'w-full px-3 py-2 rounded-md border transition-colors',
+    'w-full rounded-md border px-3 py-2 transition-colors duration-200',
     PREVIEW_FOCUS_RING,
     theme === 'dark'
-      ? 'bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500'
-      : 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400',
+      ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500'
+      : 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400',
     error && 'border-red-500 focus:ring-red-500'
   );
 
+  const inp = (
+    <input
+      id={field.id}
+      type="date"
+      value={value}
+      className={inputClasses}
+      required={isRequired}
+      autoFocus={autoFocus}
+      onChange={(e) => onFieldChange(field.id, e.target.value)}
+      onBlur={() => ctx.onFieldBlur?.(field.id)}
+      aria-invalid={!!error}
+      aria-describedby={
+        error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
+      }
+    />
+  );
+
+  const wrapped = wrapTooltipControl(error, ctx.errorPosition, inp);
+
   return (
     <>
-      <label
-        htmlFor={field.id}
-        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
-      >
-        {field.label}
-        {isRequired && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      <input
-        id={field.id}
-        type="date"
-        value={value}
-        className={inputClasses}
-        required={isRequired}
-        onChange={(e) => onFieldChange(field.id, e.target.value)}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${field.id}-error` : undefined}
-      />
-      {error && (
-        <p
-          id={`${field.id}-error`}
-          className="text-sm text-red-500 mt-1"
-          role="alert"
+      {ctx.errorPosition === 'inline' ? (
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <label
+            htmlFor={field.id}
+            className={previewStaticTextClass(
+              theme,
+              textColorOverride,
+              'cursor-default text-sm font-medium'
+            )}
+          >
+            {field.label}
+            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+          </label>
+          {error ? (
+            <span
+              id={`${field.id}-error`}
+              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+              role="alert"
+            >
+              {error}
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <label
+          htmlFor={field.id}
+          className={previewStaticTextClass(
+            theme,
+            textColorOverride,
+            'mb-1 block cursor-default text-sm font-medium'
+          )}
         >
+          {field.label}
+          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+        </label>
+      )}
+      {wrapped}
+      {ctx.errorPosition === 'below' && error ? (
+        <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
         </p>
-      )}
+      ) : null}
     </>
   );
 }
@@ -656,49 +1030,87 @@ function createFileField(
   theme: PreviewTheme,
   isRequired: boolean,
   onFieldChange: (fieldId: string, value: any) => void,
-  textColorOverride: boolean
+  textColorOverride: boolean,
+  ctx: PreviewFieldCtx,
+  autoFocus: boolean
 ): ReactElement {
+  const showReq = isRequired && ctx.showRequiredIndicators;
   const inputClasses = cn(
-    'w-full px-3 py-2 rounded-md border transition-colors',
+    'w-full rounded-md border px-3 py-2 transition-colors duration-200',
     PREVIEW_FOCUS_RING,
-    'file:mr-4 file:py-1 file:px-3 file:rounded file:border-0',
+    'file:mr-4 file:rounded file:border-0 file:px-3 file:py-1',
     'file:text-sm file:font-medium',
     theme === 'dark'
-      ? 'bg-slate-900 border-slate-700 text-slate-100 file:bg-slate-800 file:text-slate-200'
-      : 'bg-white border-slate-300 text-slate-900 file:bg-slate-100 file:text-slate-700',
+      ? 'border-slate-700 bg-slate-900 text-slate-100 file:bg-slate-800 file:text-slate-200'
+      : 'border-slate-300 bg-white text-slate-900 file:bg-slate-100 file:text-slate-700',
     error && 'border-red-500 focus:ring-red-500'
   );
 
+  const inp = (
+    <input
+      id={field.id}
+      type="file"
+      className={inputClasses}
+      required={isRequired}
+      autoFocus={autoFocus}
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        onFieldChange(field.id, file?.name || '');
+      }}
+      onBlur={() => ctx.onFieldBlur?.(field.id)}
+      aria-invalid={!!error}
+      aria-describedby={
+        error && ctx.errorPosition !== 'tooltip' ? `${field.id}-error` : undefined
+      }
+    />
+  );
+
+  const wrapped = wrapTooltipControl(error, ctx.errorPosition, inp);
+
   return (
     <>
-      <label
-        htmlFor={field.id}
-        className={previewStaticTextClass(theme, textColorOverride, 'block text-sm font-medium mb-1')}
-      >
-        {field.label}
-        {isRequired && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      <input
-        id={field.id}
-        type="file"
-        className={inputClasses}
-        required={isRequired}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          onFieldChange(field.id, file?.name || '');
-        }}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${field.id}-error` : undefined}
-      />
-      {error && (
-        <p
-          id={`${field.id}-error`}
-          className="text-sm text-red-500 mt-1"
-          role="alert"
+      {ctx.errorPosition === 'inline' ? (
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <label
+            htmlFor={field.id}
+            className={previewStaticTextClass(
+              theme,
+              textColorOverride,
+              'cursor-default text-sm font-medium'
+            )}
+          >
+            {field.label}
+            {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+          </label>
+          {error ? (
+            <span
+              id={`${field.id}-error`}
+              className="max-w-[55%] shrink-0 text-right text-xs text-red-500"
+              role="alert"
+            >
+              {error}
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <label
+          htmlFor={field.id}
+          className={previewStaticTextClass(
+            theme,
+            textColorOverride,
+            'mb-1 block cursor-default text-sm font-medium'
+          )}
         >
+          {field.label}
+          {showReq ? <span className="ml-1 text-red-500">*</span> : null}
+        </label>
+      )}
+      {wrapped}
+      {ctx.errorPosition === 'below' && error ? (
+        <p id={`${field.id}-error`} className="mt-1 text-sm text-red-500" role="alert">
           {error}
         </p>
-      )}
+      ) : null}
     </>
   );
 }
@@ -749,7 +1161,8 @@ function createFormWrapper(
   schema: ComponentSchema,
   theme: PreviewTheme,
   onSubmit: (e: FormEvent<HTMLFormElement>) => void,
-  designMode = false
+  designMode = false,
+  submitOnEnter = true
 ): ReactElement {
   const { styling } = schema;
   const spacing = styling.spacing || 'normal';
@@ -784,63 +1197,73 @@ function createFormWrapper(
   const submitLabelColor = getContrastForegroundForHex(ps.primaryColor);
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className={formClasses}
-      style={formStyle}
-      noValidate
-      aria-label={designMode ? 'Component layout (design mode)' : undefined}
-    >
-      {/* Form Title */}
-      {schema.name && (
-        <h2
-          className={cn(
-            'text-2xl font-semibold mb-6',
-            !textOverride && (theme === 'dark' ? 'text-slate-100' : 'text-slate-900')
-          )}
-        >
-          {formatSchemaDisplayName(schema.name)}
-        </h2>
-      )}
+    <TooltipProvider delayDuration={0}>
+      <form
+        onSubmit={onSubmit}
+        onKeyDown={(e) => {
+          if (designMode || submitOnEnter) return;
+          if (e.key !== 'Enter') return;
+          const t = e.target as HTMLElement;
+          if (t.tagName === 'INPUT' || t.tagName === 'SELECT') {
+            e.preventDefault();
+          }
+        }}
+        className={formClasses}
+        style={formStyle}
+        noValidate
+        aria-label={designMode ? 'Component layout (design mode)' : undefined}
+      >
+        {/* Form Title */}
+        {schema.name && (
+          <h2
+            className={cn(
+              'text-2xl font-semibold mb-6',
+              !textOverride && (theme === 'dark' ? 'text-slate-100' : 'text-slate-900')
+            )}
+          >
+            {formatSchemaDisplayName(schema.name)}
+          </h2>
+        )}
 
-      {/* Form Description */}
-      {schema.description && (
-        <p
-          className={cn(
-            'text-sm mb-6',
-            !textOverride && (theme === 'dark' ? 'text-slate-400' : 'text-slate-600'),
-            textOverride && 'opacity-90'
-          )}
-        >
-          {schema.description}
-        </p>
-      )}
+        {/* Form Description */}
+        {schema.description && (
+          <p
+            className={cn(
+              'text-sm mb-6',
+              !textOverride && (theme === 'dark' ? 'text-slate-400' : 'text-slate-600'),
+              textOverride && 'opacity-90'
+            )}
+          >
+            {schema.description}
+          </p>
+        )}
 
-      {/* Form Fields */}
-      {content}
+        {/* Form Fields */}
+        {content}
 
-      {/* Submit Button */}
-      <div className={cn('mt-6', designMode && 'pointer-events-none opacity-40')}>
-        <button
-          type="submit"
-          style={{
-            backgroundColor: ps.primaryColor,
-            color: submitLabelColor,
-          }}
-          className={cn(
-            'w-full rounded-md px-4 py-2 font-medium transition-opacity duration-200',
-            'hover:opacity-90 active:opacity-80',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-            submitLabelColor === '#000000'
-              ? 'focus-visible:ring-slate-500'
-              : 'focus-visible:ring-white/70',
-            theme === 'dark' ? 'focus-visible:ring-offset-slate-900' : 'focus-visible:ring-offset-white'
-          )}
-        >
-          Submit
-        </button>
-      </div>
-    </form>
+        {/* Submit Button */}
+        <div className={cn('mt-6', designMode && 'pointer-events-none opacity-40')}>
+          <button
+            type="submit"
+            style={{
+              backgroundColor: ps.primaryColor,
+              color: submitLabelColor,
+            }}
+            className={cn(
+              'w-full rounded-md px-4 py-2 font-medium transition-opacity duration-200',
+              'hover:opacity-90 active:opacity-80',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+              submitLabelColor === '#000000'
+                ? 'focus-visible:ring-slate-500'
+                : 'focus-visible:ring-white/70',
+              theme === 'dark' ? 'focus-visible:ring-offset-slate-900' : 'focus-visible:ring-offset-white'
+            )}
+          >
+            Submit
+          </button>
+        </div>
+      </form>
+    </TooltipProvider>
   );
 }
 
