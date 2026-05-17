@@ -20,7 +20,7 @@ export function DashboardLayout({ children, className, sidebar }: DashboardLayou
       {sidebar}
       <SidebarInset
         className={cn(
-          'flex min-h-svh min-w-0 flex-1 flex-col border-border bg-background md:border-l',
+          'flex min-h-svh min-w-0 flex-1 flex-col border-border bg-dashboard-canvas md:border-l',
           className
         )}
       >

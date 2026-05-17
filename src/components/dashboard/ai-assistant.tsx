@@ -200,7 +200,7 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
                 'ring-1 ring-sidebar-border/50',
                 'transition-all duration-300',
                 'hover:border-sidebar-primary/40 hover:bg-sidebar-accent hover:shadow-xl hover:shadow-black/40',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-dashboard-canvas'
               )}
             >
               {isPulsing && (
