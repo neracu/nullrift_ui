@@ -442,11 +442,11 @@ export const SUBMIT_BUTTON_WIDTH_OPTIONS = [
 export const TUNING_COLOR_PRESETS = [
   {
     id: 'default',
-    label: 'Default',
-    primaryColor: '#2563eb',
+    label: 'App shell',
+    primaryColor: '#ff77d5',
     secondaryColor: '#64748b',
-    backgroundColor: '#ffffff',
-    textColor: '#0f172a',
+    backgroundColor: '#0f172a',
+    textColor: '#f8fafc',
   },
   {
     id: 'slate',

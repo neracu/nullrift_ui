@@ -43,12 +43,12 @@ export function PreviewCanvas({
   });
 
   return (
-    <Card className="overflow-hidden border-white/10 bg-black/30 backdrop-blur-xl">
-      <div className="border-b border-white/10 bg-black/20 px-4 py-4">
+    <Card className="overflow-hidden border-sidebar-border/70 bg-sidebar/72 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border/25 backdrop-blur-xl backdrop-saturate-150">
+      <div className="border-b border-sidebar-border/50 bg-sidebar-accent/40 px-4 py-4 backdrop-blur-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-white">Interactive Preview</h2>
-            <p className="mt-1 text-xs text-slate-400">
+            <h2 className="text-lg font-semibold text-sidebar-foreground">Interactive Preview</h2>
+            <p className="mt-1 text-xs text-sidebar-foreground/65">
               {schema.name ? formatSchemaDisplayName(schema.name) : 'Generated Component'}
             </p>
           </div>
@@ -69,7 +69,7 @@ export function PreviewCanvas({
       <div
         className={cn(
           'relative min-h-[400px] p-8 transition-colors',
-          'bg-gradient-to-br from-slate-900 to-slate-800'
+          'bg-gradient-to-br from-sidebar-accent/45 via-sidebar/85 to-sidebar-accent/70'
         )}
       >
         <PreviewFrame

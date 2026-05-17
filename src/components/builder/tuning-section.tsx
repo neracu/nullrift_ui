@@ -49,29 +49,29 @@ export function TuningSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={cn('border-b border-border last:border-b-0', className)}>
+    <div className={cn('border-b border-sidebar-border/50 last:border-b-0', className)}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           'flex w-full cursor-pointer items-center justify-between px-4 py-2.5 text-left text-sm transition-colors duration-200',
-          'hover:bg-muted/50',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          'hover:bg-sidebar-accent/50',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
           triggerClassName
         )}
         aria-expanded={isOpen}
       >
         <div className="flex items-center gap-2">
           {icon && (
-            <span className="text-muted-foreground [&_svg]:size-3.5">{icon}</span>
+            <span className="text-sidebar-foreground/60 [&_svg]:size-3.5">{icon}</span>
           )}
-          <span className="font-medium text-foreground">{title}</span>
+          <span className="font-medium text-sidebar-foreground">{title}</span>
         </div>
 
         {isOpen ? (
-          <ChevronDown className="size-4 text-muted-foreground" />
+          <ChevronDown className="size-4 text-sidebar-foreground/55" />
         ) : (
-          <ChevronRight className="size-4 text-muted-foreground" />
+          <ChevronRight className="size-4 text-sidebar-foreground/55" />
         )}
       </button>
 

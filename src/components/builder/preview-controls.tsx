@@ -36,7 +36,7 @@ export function PreviewControls({
     <div className="flex flex-wrap items-center gap-2">
       {onCanvasModeChange && (
         <div
-          className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-black/20 p-1"
+          className="flex items-center gap-0.5 rounded-lg border border-sidebar-border/55 bg-sidebar-accent/40 p-1 backdrop-blur-sm"
           role="group"
           aria-label="Preview mode"
         >
@@ -48,8 +48,8 @@ export function PreviewControls({
             className={cn(
               'h-8 gap-1.5 px-2 sm:px-3',
               canvasMode === 'interact'
-                ? 'bg-white/10 text-white'
-                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                ? 'bg-sidebar-primary/25 text-sidebar-foreground shadow-sm'
+                : 'text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
             )}
             aria-pressed={canvasMode === 'interact'}
             onClick={() => onCanvasModeChange('interact')}
@@ -66,8 +66,8 @@ export function PreviewControls({
             className={cn(
               'h-8 gap-1.5 px-2 sm:px-3',
               canvasMode === 'design'
-                ? 'bg-white/10 text-white'
-                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                ? 'bg-sidebar-primary/25 text-sidebar-foreground shadow-sm'
+                : 'text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
             )}
             aria-pressed={canvasMode === 'design'}
             onClick={() => onCanvasModeChange('design')}
@@ -80,7 +80,7 @@ export function PreviewControls({
       )}
 
       {/* Viewport Selector */}
-      <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
+      <div className="flex items-center gap-1 rounded-lg border border-sidebar-border/55 bg-sidebar-accent/40 p-1 backdrop-blur-sm">
         {viewportOptions.map((option) => (
           <Button
             key={option.value}
@@ -90,8 +90,8 @@ export function PreviewControls({
             className={cn(
               'h-8 px-3 gap-2 transition-colors',
               viewport === option.value
-                ? 'bg-white/10 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'bg-sidebar-primary/25 text-sidebar-foreground shadow-sm'
+                : 'text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
             )}
             onClick={() => onViewportChange(option.value)}
             title={option.label}
@@ -103,14 +103,14 @@ export function PreviewControls({
       </div>
 
       {/* Reset — same outer chrome as viewport row so height matches Full / zoom */}
-      <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
+      <div className="flex items-center gap-1 rounded-lg border border-sidebar-border/55 bg-sidebar-accent/40 p-1 backdrop-blur-sm">
         <Button
           variant="ghost"
           size="sm"
           disabled={isLoading}
           className={cn(
             'h-8 px-3 gap-2 transition-colors',
-            'text-slate-400 hover:text-white hover:bg-white/5'
+            'text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
           )}
           onClick={onReset}
           title="Reset preview"
@@ -121,19 +121,19 @@ export function PreviewControls({
       </div>
 
       {/* Zoom */}
-      <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 p-1">
+      <div className="flex items-center gap-1 rounded-lg border border-sidebar-border/55 bg-sidebar-accent/40 p-1 backdrop-blur-sm">
         <Button
           variant="ghost"
           size="sm"
           disabled={isLoading || zoom <= 50}
-          className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-white/5"
+          className="h-8 w-8 p-0 text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
           onClick={() => onZoomChange(zoom - 10)}
           title="Zoom out"
         >
           <ZoomOut className="h-4 w-4" />
         </Button>
 
-        <span className="min-w-[3rem] text-center text-xs font-medium text-slate-300">
+        <span className="min-w-[3rem] text-center text-xs font-medium text-sidebar-foreground/75">
           {zoom}%
         </span>
 
@@ -141,7 +141,7 @@ export function PreviewControls({
           variant="ghost"
           size="sm"
           disabled={isLoading || zoom >= 200}
-          className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-white/5"
+          className="h-8 w-8 p-0 text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
           onClick={() => onZoomChange(zoom + 10)}
           title="Zoom in"
         >

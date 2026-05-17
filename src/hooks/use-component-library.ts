@@ -40,7 +40,7 @@ export function useComponentLibrary() {
         code: params.code,
         sourcePrompt: params.sourcePrompt,
       });
-      if (!write.ok || !entry) {
+      if (!write.ok) {
         if (write.reason === 'quota') {
           toast.error('Library is full', {
             description: 'Browser storage quota exceeded. Remove entries or free disk space.',
@@ -50,6 +50,12 @@ export function useComponentLibrary() {
             description: 'Storage may be unavailable or disabled.',
           });
         }
+        return null;
+      }
+      if (!entry) {
+        toast.error('Could not save to library', {
+          description: 'Storage may be unavailable or disabled.',
+        });
         return null;
       }
       refresh();

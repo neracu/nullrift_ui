@@ -195,16 +195,17 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
               whileTap={{ scale: 0.95 }}
               onClick={toggleState}
               className={cn(
-                'relative h-16 w-16 overflow-hidden rounded-full',
-                'border border-white/25 bg-white/[0.08] shadow-2xl shadow-black/30',
-                'backdrop-blur-2xl backdrop-saturate-150',
+                'relative h-16 w-16 cursor-pointer overflow-hidden rounded-full',
+                'border-2 border-sidebar-border bg-sidebar text-sidebar-foreground shadow-lg shadow-black/35',
+                'ring-1 ring-sidebar-border/50',
                 'transition-all duration-300',
-                'hover:border-white/40 hover:bg-white/[0.12] hover:shadow-black/40'
+                'hover:border-sidebar-primary/40 hover:bg-sidebar-accent hover:shadow-xl hover:shadow-black/40',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
               )}
             >
               {isPulsing && (
                 <motion.div
-                  className="pointer-events-none absolute inset-0 rounded-full border border-white/35 bg-gradient-to-br from-fuchsia-400/10 via-transparent to-cyan-400/10"
+                  className="pointer-events-none absolute inset-0 rounded-full border border-sidebar-primary/25 bg-gradient-to-br from-sidebar-primary/15 via-transparent to-sidebar-accent/30"
                   animate={{
                     scale: [1, 1.12, 1],
                     opacity: [0.55, 0.2, 0.55],
@@ -218,7 +219,7 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
               )}
 
               <div className="relative flex h-full w-full items-center justify-center">
-                <Bot className="h-8 w-8 text-white/95 drop-shadow-sm" />
+                <Bot className="h-8 w-8 text-sidebar-primary drop-shadow-sm" aria-hidden />
               </div>
             </motion.button>
           ) : (
@@ -227,28 +228,28 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
               initial={{ scale: 0.8, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.8, opacity: 0, y: 20 }}
-              className="glass w-[400px] rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl"
+              className="w-[400px] rounded-2xl border border-sidebar-border/70 bg-sidebar/72 shadow-2xl ring-1 ring-sidebar-border/20 backdrop-blur-xl backdrop-saturate-150"
             >
-              <div className="flex items-center justify-between border-b border-white/10 p-4">
+              <div className="flex items-center justify-between border-b border-sidebar-border/50 p-4">
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
                       'flex h-10 w-10 items-center justify-center rounded-full',
-                      'border border-white/25 bg-white/[0.08] backdrop-blur-xl'
+                      'border border-sidebar-border/80 bg-sidebar-accent/50 backdrop-blur-md'
                     )}
                   >
-                    <Bot className="h-6 w-6 text-white/95" />
+                    <Bot className="h-6 w-6 text-sidebar-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">AI Assistant</h3>
-                    <p className="text-xs text-slate-400">Here to help you build</p>
+                    <h3 className="font-semibold text-sidebar-foreground">AI Assistant</h3>
+                    <p className="text-xs text-sidebar-foreground/65">Here to help you build</p>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={toggleState}
-                  className="text-slate-400 hover:text-white"
+                  className="text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -257,7 +258,7 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
               <div className="max-h-[400px] overflow-y-auto p-4">
                 <div className="mb-3 flex items-center gap-2">
                   <Lightbulb className="h-4 w-4 text-yellow-400" />
-                  <span className="text-sm font-medium text-slate-300">Suggestions</span>
+                  <span className="text-sm font-medium text-sidebar-foreground/85">Suggestions</span>
                 </div>
 
                 <div className="space-y-2">
@@ -270,7 +271,7 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
                       whileTap={{ scale: 0.98 }}
                       onClick={() => suggestion.action?.()}
                       className={cn(
-                        'w-full rounded-lg border border-white/10 bg-white/5 p-3 text-left transition-all hover:bg-white/10',
+                        'w-full rounded-lg border border-sidebar-border/50 bg-sidebar-accent/35 p-3 text-left backdrop-blur-sm transition-all hover:bg-sidebar-accent/55',
                         suggestion.action && 'cursor-pointer',
                         suggestion.action &&
                           phase === 'loading' &&
@@ -282,8 +283,8 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
                           {suggestion.icon}
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-sm font-medium text-white">{suggestion.title}</h4>
-                          <p className="mt-1 text-xs text-slate-400">{suggestion.description}</p>
+                          <h4 className="text-sm font-medium text-sidebar-foreground">{suggestion.title}</h4>
+                          <p className="mt-1 text-xs text-sidebar-foreground/65">{suggestion.description}</p>
                         </div>
                       </div>
                     </motion.button>
@@ -291,24 +292,24 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
                 </div>
               </div>
 
-              <div className="border-t border-white/10 p-4">
+              <div className="border-t border-sidebar-border/50 p-4">
                 {(phase === 'success' || isFollowUpBusy) && onFollowUpGenerate ? (
                   <div className="space-y-3">
                     {isFollowUpBusy ? (
                       <div className="space-y-2" aria-live="polite" aria-busy="true">
-                        <div className="h-0.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                        <div className="h-0.5 w-full overflow-hidden rounded-full bg-sidebar-border/40">
                           <motion.div
-                            className="h-full rounded-full bg-white/35"
+                            className="h-full rounded-full bg-sidebar-primary/70"
                             initial={{ width: 0 }}
                             animate={{ width: `${Math.min(stageProgress.progress, 100)}%` }}
                             transition={{ duration: 0.2, ease: 'easeOut' }}
                           />
                         </div>
                         <div className="flex items-baseline justify-between gap-3 px-0.5">
-                          <span className="min-w-0 truncate text-xs font-medium tracking-tight text-slate-200">
+                          <span className="min-w-0 truncate text-xs font-medium tracking-tight text-sidebar-foreground/90">
                             {stageProgress.currentStageInfo.label}
                           </span>
-                          <span className="shrink-0 tabular-nums text-[10px] text-slate-500">
+                          <span className="shrink-0 tabular-nums text-[10px] text-sidebar-foreground/50">
                             {stageProgress.elapsedSeconds}s
                             {stageProgress.estimatedSecondsRemaining > 0
                               ? ` · ~${stageProgress.estimatedSecondsRemaining}s`
@@ -330,14 +331,14 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
                       rows={3}
                       disabled={isFollowUpBusy}
                       className={cn(
-                        'resize-none border-white/15 bg-white/5 text-sm text-white',
-                        'placeholder:text-slate-500',
-                        'focus-visible:ring-1 focus-visible:ring-white/30',
+                        'resize-none border-sidebar-border/60 bg-sidebar-accent/40 text-sm text-sidebar-foreground backdrop-blur-sm',
+                        'placeholder:text-sidebar-foreground/45',
+                        'focus-visible:ring-1 focus-visible:ring-sidebar-ring',
                         isFollowUpBusy && 'cursor-wait opacity-70'
                       )}
                     />
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-sidebar-foreground/55">
                         {followUpDraft.length} / {FOLLOW_UP_PROMPT_MAX_LENGTH}
                       </span>
                       <Button
@@ -360,14 +361,14 @@ export const AiAssistant = forwardRef<AiAssistantHandle, AiAssistantProps>(
                         )}
                       </Button>
                     </div>
-                    <p className="text-[11px] leading-snug text-slate-500">
+                    <p className="text-[11px] leading-snug text-sidebar-foreground/50">
                       ⌘/Ctrl + Enter to send
                     </p>
                   </div>
                 ) : (
                   <button
                     type="button"
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/5 py-2 text-sm text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-transparent bg-sidebar-accent/35 py-2 text-sm text-sidebar-foreground/70 backdrop-blur-sm transition-colors hover:border-sidebar-border/50 hover:bg-sidebar-accent/55 hover:text-sidebar-foreground"
                   >
                     <MessageCircle className="h-4 w-4" />
                     <span>Use the main prompt area to start a build</span>

@@ -17,6 +17,8 @@ interface IdeCodeBlockProps {
   code: string;
   lang: IdeCodeLang;
   className?: string;
+  /** When `sidebar`, chrome matches the builder rail (borders, toolbar, surfaces). */
+  chrome?: "default" | "sidebar";
   /** Gutter with line indices (synced scroll with highlighted body). */
   showLineNumbers?: boolean;
   /** Optional monospace label in the toolbar (e.g. file name). */
@@ -32,6 +34,7 @@ export function IdeCodeBlock({
   code,
   lang,
   className,
+  chrome = "default",
   showLineNumbers = false,
   fileLabel,
   downloadFileName,
@@ -40,6 +43,7 @@ export function IdeCodeBlock({
   const [failed, setFailed] = useState(false);
   const lines = useMemo(() => code.split("\n"), [code]);
   const showToolbar = Boolean(fileLabel?.trim() || downloadFileName);
+  const dockSidebar = chrome === "sidebar";
 
   useEffect(() => {
     let active = true;
@@ -75,14 +79,29 @@ export function IdeCodeBlock({
     return (
       <div
         className={cn(
-          "overflow-hidden rounded-md border border-border bg-muted/30 shadow-inner ring-1 ring-white/5",
+          "overflow-hidden rounded-md border shadow-inner",
+          dockSidebar
+            ? "border-sidebar-border/70 bg-sidebar-accent/30 ring-1 ring-sidebar-border/25"
+            : "border-border bg-muted/30 ring-1 ring-white/5",
           className
         )}
       >
         {showToolbar && (
-          <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
+          <div
+            className={cn(
+              "flex items-center justify-between gap-2 border-b px-3 py-2",
+              dockSidebar ? "border-sidebar-border bg-sidebar-accent/45" : "border-border bg-muted/40"
+            )}
+          >
             {fileLabel ? (
-              <span className="truncate font-mono text-xs text-muted-foreground">{fileLabel}</span>
+              <span
+                className={cn(
+                  "truncate font-mono text-xs",
+                  dockSidebar ? "text-sidebar-foreground/70" : "text-muted-foreground"
+                )}
+              >
+                {fileLabel}
+              </span>
             ) : (
               <span />
             )}
@@ -91,7 +110,11 @@ export function IdeCodeBlock({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-8 shrink-0 cursor-pointer gap-1.5 px-2 text-xs transition-colors"
+                className={cn(
+                  "h-8 shrink-0 cursor-pointer gap-1.5 px-2 text-xs transition-colors",
+                  dockSidebar &&
+                    "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                )}
                 onClick={onDownload}
               >
                 <Download className="size-3.5" aria-hidden />
@@ -103,7 +126,12 @@ export function IdeCodeBlock({
         <div className="flex max-h-[480px] overflow-auto">
           {showLineNumbers && (
             <div
-              className="sticky left-0 shrink-0 select-none border-r border-border/70 bg-muted/20 py-4 pr-3 text-right font-mono text-xs leading-relaxed text-muted-foreground"
+              className={cn(
+                "sticky left-0 shrink-0 select-none border-r py-4 pr-3 text-right font-mono text-xs leading-relaxed",
+                dockSidebar
+                  ? "border-sidebar-border bg-sidebar text-sidebar-foreground/55"
+                  : "border-border/70 bg-muted/20 text-muted-foreground"
+              )}
               aria-hidden
             >
               {lines.map((_, index) => (
@@ -115,7 +143,8 @@ export function IdeCodeBlock({
           )}
           <pre
             className={cn(
-              "min-w-0 flex-1 overflow-visible p-4 text-left font-mono text-xs leading-relaxed text-foreground",
+              "min-w-0 flex-1 overflow-visible p-4 text-left font-mono text-xs leading-relaxed",
+              dockSidebar ? "text-sidebar-foreground" : "text-foreground",
               !showLineNumbers && "max-h-[480px] overflow-auto"
             )}
           >
@@ -130,16 +159,26 @@ export function IdeCodeBlock({
     return (
       <div
         className={cn(
-          "overflow-hidden rounded-md border border-border bg-muted/25 shadow-inner ring-1 ring-white/5",
+          "overflow-hidden rounded-md border shadow-inner",
+          dockSidebar
+            ? "border-sidebar-border/70 bg-sidebar-accent/25 ring-1 ring-sidebar-border/20"
+            : "border-border bg-muted/25 ring-1 ring-white/5",
           className
         )}
       >
         {showToolbar && (
-          <div className="flex h-10 items-center border-b border-border bg-muted/30 px-3" aria-hidden />
+          <div
+            className={cn(
+              "flex h-10 items-center border-b px-3",
+              dockSidebar ? "border-sidebar-border bg-sidebar-accent/40" : "border-border bg-muted/30"
+            )}
+            aria-hidden
+          />
         )}
         <div
           className={cn(
-            "max-h-[480px] min-h-[12rem] animate-pulse bg-muted/20 motion-reduce:animate-none",
+            "max-h-[480px] min-h-[12rem] animate-pulse motion-reduce:animate-none",
+            dockSidebar ? "bg-sidebar/50" : "bg-muted/20",
             showLineNumbers && "min-h-[14rem]"
           )}
           aria-busy
@@ -152,14 +191,29 @@ export function IdeCodeBlock({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-md border border-border shadow-inner ring-1 ring-white/5",
+        "overflow-hidden rounded-md border shadow-inner",
+        dockSidebar
+          ? "border-sidebar-border/70 bg-sidebar ring-1 ring-sidebar-border/25"
+          : "border-border ring-1 ring-white/5",
         className
       )}
     >
       {showToolbar && (
-        <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
+        <div
+          className={cn(
+            "flex items-center justify-between gap-2 border-b px-3 py-2",
+            dockSidebar ? "border-sidebar-border bg-sidebar-accent/50" : "border-border bg-muted/40"
+          )}
+        >
           {fileLabel ? (
-            <span className="truncate font-mono text-xs text-muted-foreground">{fileLabel}</span>
+            <span
+              className={cn(
+                "truncate font-mono text-xs",
+                dockSidebar ? "text-sidebar-foreground/75" : "text-muted-foreground"
+              )}
+            >
+              {fileLabel}
+            </span>
           ) : (
             <span />
           )}
@@ -168,7 +222,11 @@ export function IdeCodeBlock({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 shrink-0 cursor-pointer gap-1.5 px-2 text-xs transition-colors focus-visible:ring-1"
+              className={cn(
+                "h-8 shrink-0 cursor-pointer gap-1.5 px-2 text-xs transition-colors focus-visible:ring-1",
+                dockSidebar &&
+                  "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+              )}
               onClick={onDownload}
             >
               <Download className="size-3.5" aria-hidden />
@@ -177,10 +235,15 @@ export function IdeCodeBlock({
           ) : null}
         </div>
       )}
-      <div className="flex max-h-[480px] overflow-auto">
+      <div className={cn("flex max-h-[480px] overflow-auto", dockSidebar && "bg-sidebar")}>
         {showLineNumbers && (
           <div
-            className="sticky left-0 shrink-0 select-none border-r border-border/70 bg-zinc-950/95 py-4 pr-3 text-right font-mono text-xs leading-relaxed text-zinc-500"
+            className={cn(
+              "sticky left-0 shrink-0 select-none border-r py-4 pr-3 text-right font-mono text-xs leading-relaxed",
+              dockSidebar
+                ? "border-sidebar-border bg-sidebar-accent text-sidebar-foreground/55"
+                : "border-border/70 bg-zinc-950/95 text-zinc-500"
+            )}
             aria-hidden
           >
             {lines.map((_, index) => (

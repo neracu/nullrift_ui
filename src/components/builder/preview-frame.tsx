@@ -69,8 +69,8 @@ export function PreviewFrame({
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-          <p className="text-sm text-slate-400">Loading preview...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-sidebar-primary" />
+          <p className="text-sm text-sidebar-foreground/65">Loading preview...</p>
         </div>
       </div>
     );
@@ -82,8 +82,8 @@ export function PreviewFrame({
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3 max-w-md text-center">
           <AlertCircle className="h-8 w-8 text-red-500" />
-          <p className="text-sm font-medium text-slate-200">Preview Error</p>
-          <p className="text-xs text-slate-400">{error.message}</p>
+          <p className="text-sm font-medium text-sidebar-foreground">Preview Error</p>
+          <p className="text-xs text-sidebar-foreground/65">{error.message}</p>
         </div>
       </div>
     );
@@ -102,11 +102,11 @@ export function PreviewFrame({
     <div className="relative w-full overflow-auto">
       {/* Viewport Label */}
       <div className="mb-4 flex items-center justify-center gap-2">
-        <span className="text-xs font-medium text-slate-400">
+        <span className="text-xs font-medium text-sidebar-foreground/60">
           {viewportConfig.icon} {viewportConfig.label}
         </span>
         {state.viewport !== 'full' && (
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-sidebar-foreground/50">
             {viewportConfig.width} × {viewportConfig.height}
           </span>
         )}
@@ -119,7 +119,7 @@ export function PreviewFrame({
           className={cn(
             'w-full rounded-lg border shadow-2xl transition-all duration-200',
             effectiveTheme === 'dark'
-              ? 'bg-slate-950 border-slate-800'
+              ? 'bg-sidebar border-sidebar-border'
               : 'bg-white border-slate-200'
           )}
         >
@@ -149,7 +149,7 @@ export function PreviewFrame({
       {/* Zoom Indicator */}
       {state.zoom !== 100 && (
         <div className="mt-4 text-center">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-sidebar-foreground/55">
             Zoom: {state.zoom}%
           </span>
         </div>

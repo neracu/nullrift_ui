@@ -43,6 +43,15 @@ import { FIELD_TYPE_OPTIONS, LAYOUT_OPTIONS } from '@/types/tuning';
 import { SUBMIT_BUTTON_LAYER_ID, getEffectiveLayerOrder } from '@/lib/tuning/layer-order';
 import { cn } from '@/lib/utils';
 
+const TUNING_SELECT_TRIGGER =
+  'h-9 border-sidebar-border bg-sidebar-accent/25 text-sm text-sidebar-foreground focus:ring-sidebar-ring';
+const TUNING_SELECT_CONTENT =
+  'border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150';
+const TUNING_SELECT_ITEM =
+  'cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground';
+const TUNING_FIELD_INPUT =
+  'border-sidebar-border bg-sidebar-accent/20 text-sidebar-foreground placeholder:text-sidebar-foreground/45 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar';
+
 /** Radix Select requires `value` to match an item; schemas may carry unknown layout strings. */
 function coerceLayout(
   layout: ComponentSchema['layout'] | undefined | null
@@ -119,18 +128,18 @@ function SortableLayerRow({
       ref={setRefs}
       style={style}
       className={cn(
-        'flex items-center gap-1.5 rounded-md border border-border bg-muted/20 px-1.5 py-1 transition-colors duration-200',
-        'hover:bg-muted/40',
-        selected && 'ring-1 ring-ring',
-        highlighted && 'border-primary/60 bg-primary/5',
+        'flex items-center gap-1.5 rounded-md border border-sidebar-border bg-sidebar-accent/20 px-1.5 py-1 transition-colors duration-200',
+        'hover:bg-sidebar-accent/35',
+        selected && 'ring-1 ring-sidebar-ring',
+        highlighted && 'border-sidebar-primary/55 bg-sidebar-primary/10',
         isDragging && 'z-10 opacity-90 shadow-sm'
       )}
     >
       <button
         type="button"
         className={cn(
-          'flex size-7 shrink-0 cursor-grab items-center justify-center rounded border border-border',
-          'text-muted-foreground hover:bg-muted active:cursor-grabbing',
+          'flex size-7 shrink-0 cursor-grab items-center justify-center rounded border border-sidebar-border',
+          'text-sidebar-foreground/65 hover:bg-sidebar-accent/45 active:cursor-grabbing',
           disabled && 'pointer-events-none opacity-40'
         )}
         aria-label={`Drag to reorder ${field.label}`}
@@ -144,13 +153,13 @@ function SortableLayerRow({
         onClick={onSelect}
         className={cn(
           'min-w-0 flex-1 cursor-pointer rounded px-1 py-0.5 text-left',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring'
         )}
       >
-        <div className="truncate text-sm font-medium text-foreground">{field.label}</div>
-        <div className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+        <div className="truncate text-sm font-medium text-sidebar-foreground">{field.label}</div>
+        <div className="flex items-center gap-1.5 truncate text-xs text-sidebar-foreground/65">
           <span className="font-mono text-[11px] leading-tight sm:text-xs">{field.id}</span>
-          <span className="text-border">·</span>
+          <span className="text-sidebar-border">·</span>
           <span>{field.type}</span>
         </div>
       </button>
@@ -159,7 +168,7 @@ function SortableLayerRow({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-7 text-muted-foreground hover:text-foreground"
+          className="size-7 text-sidebar-foreground/65 hover:text-sidebar-foreground"
           disabled={disabled}
           title="Duplicate"
           onClick={(e) => {
@@ -173,7 +182,7 @@ function SortableLayerRow({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-7 text-muted-foreground hover:text-destructive"
+          className="size-7 text-sidebar-foreground/65 hover:text-destructive"
           disabled={disabled}
           title="Remove"
           onClick={(e) => {
@@ -223,18 +232,18 @@ function SortableSubmitLayerRow({
       ref={setRefs}
       style={style}
       className={cn(
-        'flex items-center gap-1.5 rounded-md border border-border bg-muted/20 px-1.5 py-1 transition-colors duration-200',
-        'hover:bg-muted/40',
-        selected && 'ring-1 ring-ring',
-        highlighted && 'border-primary/60 bg-primary/5',
+        'flex items-center gap-1.5 rounded-md border border-sidebar-border bg-sidebar-accent/20 px-1.5 py-1 transition-colors duration-200',
+        'hover:bg-sidebar-accent/35',
+        selected && 'ring-1 ring-sidebar-ring',
+        highlighted && 'border-sidebar-primary/55 bg-sidebar-primary/10',
         isDragging && 'z-10 opacity-90 shadow-sm'
       )}
     >
       <button
         type="button"
         className={cn(
-          'flex size-7 shrink-0 cursor-grab items-center justify-center rounded border border-border',
-          'text-muted-foreground hover:bg-muted active:cursor-grabbing',
+          'flex size-7 shrink-0 cursor-grab items-center justify-center rounded border border-sidebar-border',
+          'text-sidebar-foreground/65 hover:bg-sidebar-accent/45 active:cursor-grabbing',
           disabled && 'pointer-events-none opacity-40'
         )}
         aria-label="Drag to reorder submit button"
@@ -248,13 +257,13 @@ function SortableSubmitLayerRow({
         onClick={onSelect}
         className={cn(
           'min-w-0 flex-1 cursor-pointer rounded px-1 py-0.5 text-left',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring'
         )}
       >
-        <div className="truncate text-sm font-medium text-foreground">Submit button</div>
-        <div className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+        <div className="truncate text-sm font-medium text-sidebar-foreground">Submit button</div>
+        <div className="flex items-center gap-1.5 truncate text-xs text-sidebar-foreground/65">
           <span className="font-mono text-[11px] leading-tight sm:text-xs">{SUBMIT_BUTTON_LAYER_ID}</span>
-          <span className="text-border">·</span>
+          <span className="text-sidebar-border">·</span>
           <span>submit</span>
         </div>
       </button>
@@ -396,7 +405,7 @@ export function StructureControls({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="structure-layout" className="text-xs font-medium text-muted-foreground">
+        <Label htmlFor="structure-layout" className="text-xs font-medium text-sidebar-foreground/65">
           Form layout
         </Label>
         <Select
@@ -404,12 +413,12 @@ export function StructureControls({
           onValueChange={(value) => onLayoutChange(value as ComponentSchema['layout'])}
           disabled={disabled}
         >
-          <SelectTrigger id="structure-layout" className="h-9 text-sm">
+          <SelectTrigger id="structure-layout" className={TUNING_SELECT_TRIGGER}>
             <SelectValue placeholder="Layout" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className={TUNING_SELECT_CONTENT}>
             {LAYOUT_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+              <SelectItem key={option.value} value={option.value} className={TUNING_SELECT_ITEM}>
                 {option.label}
               </SelectItem>
             ))}
@@ -418,19 +427,19 @@ export function StructureControls({
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65">
           <ListTree className="size-3.5 shrink-0" aria-hidden />
           <span>Layers</span>
-          <span className="text-xs font-normal tabular-nums text-muted-foreground/90">
+          <span className="text-xs font-normal tabular-nums text-sidebar-foreground/75">
             ({layerIds.length})
           </span>
         </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={layerIds}>
-            <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-md border border-border bg-muted/10 p-1.5">
+            <div className="flex max-h-52 flex-col gap-1 overflow-y-auto rounded-md border border-sidebar-border bg-sidebar-accent/15 p-1.5">
               {schema.fields.length === 0 ? (
-                <p className="py-3 text-center text-sm text-muted-foreground">No fields yet.</p>
+                <p className="py-3 text-center text-sm text-sidebar-foreground/65">No fields yet.</p>
               ) : null}
               {layerIds.map((layerId) => {
                   if (layerId === SUBMIT_BUTTON_LAYER_ID) {
@@ -473,21 +482,21 @@ export function StructureControls({
       </div>
 
       {selectedField && (
-        <div className="space-y-3 rounded-md border border-border bg-muted/10 p-3">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <div className="space-y-3 rounded-md border border-sidebar-border bg-sidebar-accent/15 p-3">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65">
             <Layers className="size-3.5 shrink-0" aria-hidden />
             <span>Properties</span>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Field id</Label>
+            <Label className="text-xs font-medium text-sidebar-foreground/65">Field id</Label>
             <div className="flex gap-1">
-              <Input readOnly value={selectedField.id} className="h-9 font-mono text-xs" />
+              <Input readOnly value={selectedField.id} className={cn(TUNING_FIELD_INPUT, 'h-9 font-mono text-xs')} />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-9 shrink-0 px-2"
+                className="h-9 shrink-0 border-sidebar-border bg-sidebar-accent/25 px-2 text-sidebar-foreground hover:bg-sidebar-accent/40"
                 onClick={() => handleCopyId(selectedField.id)}
               >
                 <Copy className="size-3.5" />
@@ -496,12 +505,12 @@ export function StructureControls({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="f-label" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor="f-label" className="text-xs font-medium text-sidebar-foreground/65">
               Label
             </Label>
             <Input
               id="f-label"
-              className="h-9 text-sm"
+              className={cn(TUNING_FIELD_INPUT, 'h-9 text-sm')}
               value={draftLabel}
               disabled={disabled}
               onChange={(e) => setDraftLabel(e.target.value)}
@@ -517,12 +526,12 @@ export function StructureControls({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="f-ph" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor="f-ph" className="text-xs font-medium text-sidebar-foreground/65">
               Placeholder
             </Label>
             <Input
               id="f-ph"
-              className="h-9 text-sm"
+              className={cn(TUNING_FIELD_INPUT, 'h-9 text-sm')}
               value={draftPlaceholder}
               disabled={disabled}
               onChange={(e) => setDraftPlaceholder(e.target.value)}
@@ -536,7 +545,7 @@ export function StructureControls({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Type</Label>
+            <Label className="text-xs font-medium text-sidebar-foreground/65">Type</Label>
             <Select
               value={selectedField.type}
               disabled={disabled}
@@ -553,12 +562,12 @@ export function StructureControls({
                 onModifyField(selectedField.id, patch);
               }}
             >
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger className={TUNING_SELECT_TRIGGER}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className={TUNING_SELECT_CONTENT}>
                 {FIELD_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
+                  <SelectItem key={opt.value} value={opt.value} className={TUNING_SELECT_ITEM}>
                     {opt.label}
                   </SelectItem>
                 ))}
@@ -566,8 +575,8 @@ export function StructureControls({
             </Select>
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-md border border-border/80 bg-background/50 px-2 py-1.5">
-            <Label htmlFor="f-req" className="cursor-pointer text-xs font-medium text-muted-foreground">
+          <div className="flex items-center justify-between gap-3 rounded-md border border-sidebar-border/80 bg-sidebar-accent/25 px-2 py-1.5">
+            <Label htmlFor="f-req" className="cursor-pointer text-xs font-medium text-sidebar-foreground/65">
               Required
             </Label>
             <Switch
@@ -584,7 +593,7 @@ export function StructureControls({
 
           {showSpanControl && (
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Column span</Label>
+              <Label className="text-xs font-medium text-sidebar-foreground/65">Column span</Label>
               <Select
                 value={String(selectedField.layout?.colSpan ?? 1)}
                 disabled={disabled}
@@ -595,12 +604,12 @@ export function StructureControls({
                   });
                 }}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className={TUNING_SELECT_TRIGGER}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={TUNING_SELECT_CONTENT}>
                   {Array.from({ length: maxSpan }, (_, i) => i + 1).map((n) => (
-                    <SelectItem key={n} value={String(n)}>
+                    <SelectItem key={n} value={String(n)} className={TUNING_SELECT_ITEM}>
                       {n === 1 ? '1 (default)' : String(n)}
                     </SelectItem>
                   ))}
@@ -611,12 +620,12 @@ export function StructureControls({
 
           {(selectedField.type === 'select' || selectedField.type === 'radio') && (
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-muted-foreground">Options</Label>
+              <Label className="text-xs font-medium text-sidebar-foreground/65">Options</Label>
               <div className="space-y-1.5">
                 {(selectedField.options ?? DEFAULT_SELECT_OPTIONS).map((opt, idx) => (
                   <div key={idx} className="flex gap-1">
                     <Input
-                      className="h-8 flex-1 text-sm"
+                      className={cn(TUNING_FIELD_INPUT, 'h-8 flex-1 text-sm')}
                       placeholder="Label"
                       disabled={disabled}
                       value={opt.label}
@@ -627,7 +636,7 @@ export function StructureControls({
                       }}
                     />
                     <Input
-                      className="h-8 w-24 shrink-0 font-mono text-xs"
+                      className={cn(TUNING_FIELD_INPUT, 'h-8 w-24 shrink-0 font-mono text-xs')}
                       placeholder="value"
                       disabled={disabled}
                       value={opt.value}
@@ -641,7 +650,7 @@ export function StructureControls({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+                      className="size-7 shrink-0 text-sidebar-foreground/65 hover:text-destructive"
                       disabled={disabled || (selectedField.options?.length ?? 0) <= 1}
                       title="Remove option"
                       onClick={() => {
@@ -658,7 +667,7 @@ export function StructureControls({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 w-full text-xs"
+                  className="h-7 w-full border-sidebar-border bg-sidebar-accent/25 text-xs text-sidebar-foreground hover:bg-sidebar-accent/40"
                   disabled={disabled}
                   onClick={() => {
                     const opts = [...(selectedField.options ?? DEFAULT_SELECT_OPTIONS)];
@@ -675,9 +684,9 @@ export function StructureControls({
         </div>
       )}
 
-      <div className="space-y-2 rounded-md border border-border bg-muted/10 p-3">
-        <Label className="text-xs font-medium text-muted-foreground">Add field</Label>
-        <p className="text-xs leading-relaxed text-muted-foreground">
+      <div className="space-y-2 rounded-md border border-sidebar-border bg-sidebar-accent/15 p-3">
+        <Label className="text-xs font-medium text-sidebar-foreground/65">Add field</Label>
+        <p className="text-xs leading-relaxed text-sidebar-foreground/65">
           New field is inserted after the selected layer, or at the end if none selected.
         </p>
         <Select
@@ -685,12 +694,12 @@ export function StructureControls({
           disabled={disabled}
           onValueChange={(value) => setSelectedFieldType(value as FieldDefinition['type'])}
         >
-          <SelectTrigger className="h-9 text-sm">
+          <SelectTrigger className={TUNING_SELECT_TRIGGER}>
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className={TUNING_SELECT_CONTENT}>
             {FIELD_TYPE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+              <SelectItem key={option.value} value={option.value} className={TUNING_SELECT_ITEM}>
                 {option.label}
               </SelectItem>
             ))}
@@ -707,13 +716,13 @@ export function StructureControls({
             }
           }}
           placeholder="Label"
-          className="h-9 text-sm"
+          className={cn(TUNING_FIELD_INPUT, 'h-9 text-sm')}
         />
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="h-9 w-full text-sm"
+          className="h-9 w-full border-sidebar-border bg-sidebar-primary text-sm text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
           disabled={disabled || !newFieldLabel.trim()}
           onClick={handleAddField}
         >
@@ -722,9 +731,9 @@ export function StructureControls({
         </Button>
       </div>
 
-      <div className="flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between border-t border-sidebar-border pt-2 text-xs text-sidebar-foreground/65">
         <span>Required fields</span>
-        <span className="tabular-nums text-foreground">
+        <span className="tabular-nums text-sidebar-foreground">
           {schema.fields.filter((f) => f.validation?.required).length}
         </span>
       </div>

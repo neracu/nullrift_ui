@@ -63,6 +63,20 @@ const navMenuIconModeClass = 'w-full min-w-0';
 const navItemIconModeClass = 'w-full min-w-0';
 const navGroupContentIconModeClass = 'w-full min-w-0';
 
+/** Account popover: matches sidebar glass rail (Library / tuning panels). */
+const accountMenuShellClass = cn(
+  'w-56 rounded-lg border border-sidebar-border/70 bg-sidebar/90 p-1 text-sidebar-foreground shadow-lg',
+  'ring-1 ring-sidebar-border/25 backdrop-blur-xl backdrop-saturate-150'
+);
+
+const accountMenuItemClass = cn(
+  'cursor-pointer gap-2.5 rounded-md py-2 pl-2.5 pr-2 text-sm outline-none transition-colors',
+  'text-sidebar-foreground focus:bg-sidebar-accent focus:text-sidebar-accent-foreground',
+  'data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0'
+);
+
+const accountMenuSeparatorClass = '-mx-1 my-1.5 h-px bg-sidebar-border/55';
+
 /**
  * Builder collapsible rail: shadcn Sidebar (icon/offcanvas), nav actions, profile dropdown.
  */
@@ -157,53 +171,49 @@ export function Sidebar({
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-56 rounded-lg"
+                className={accountMenuShellClass}
                 side="top"
                 align="start"
                 sideOffset={8}
               >
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-base font-medium leading-none">User</p>
-                    <p className="text-sm leading-none text-muted-foreground">you@example.com</p>
+                <DropdownMenuLabel className="px-2.5 py-2 font-normal">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-semibold leading-none text-sidebar-foreground">User</p>
+                    <p className="text-xs leading-none text-sidebar-foreground/65">you@example.com</p>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/login" className="cursor-pointer text-base">
-                    <User className="mr-2 size-5" />
+                <DropdownMenuSeparator className={accountMenuSeparatorClass} />
+                <DropdownMenuItem asChild className={accountMenuItemClass}>
+                  <Link href="/login">
+                    <User />
                     Profile
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer text-base"
-                  onClick={() => {
-                    onSettings();
-                  }}
-                >
-                  <Keyboard className="mr-2 size-5" />
+                <DropdownMenuItem className={accountMenuItemClass} onClick={() => onSettings()}>
+                  <Keyboard />
                   {BUILDER_LABELS.settings}
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={BUILDER_HELP_HREF} className="cursor-pointer text-base">
-                    <HelpCircle className="mr-2 size-5" />
+                <DropdownMenuItem asChild className={accountMenuItemClass}>
+                  <Link href={BUILDER_HELP_HREF}>
+                    <HelpCircle />
                     {BUILDER_LABELS.help}
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={BUILDER_HOME_HREF} className="cursor-pointer text-base">
-                    <Home className="mr-2 size-5" />
+                <DropdownMenuItem asChild className={accountMenuItemClass}>
+                  <Link href={BUILDER_HOME_HREF}>
+                    <Home />
                     {BUILDER_LABELS.home}
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator className={accountMenuSeparatorClass} />
                 <DropdownMenuItem
-                  className="cursor-pointer text-base text-destructive focus:text-destructive"
-                  onClick={() => {
-                    handleSignOut();
-                  }}
+                  className={cn(
+                    accountMenuItemClass,
+                    'text-destructive focus:bg-destructive/10 focus:text-destructive'
+                  )}
+                  onClick={() => handleSignOut()}
                 >
-                  <LogOut className="mr-2 size-5" />
+                  <LogOut />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>

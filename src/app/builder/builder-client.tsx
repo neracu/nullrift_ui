@@ -299,17 +299,32 @@ export function BuilderClient() {
       />
 
       <Sheet open={librarySheetOpen} onOpenChange={setLibrarySheetOpen}>
-        <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
-          <SheetHeader className="space-y-1 text-left">
-            <SheetTitle>Library</SheetTitle>
-            <SheetDescription>Saved components will appear here.</SheetDescription>
+        <SheetContent
+          side="right"
+          className={cn(
+            'flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md',
+            'border-l border-sidebar-border/70 bg-sidebar/72 text-sidebar-foreground shadow-xl',
+            'ring-1 ring-sidebar-border/25 backdrop-blur-xl backdrop-saturate-150',
+            '[&>button]:text-sidebar-foreground/80 [&>button]:hover:bg-sidebar-accent/55 [&>button]:hover:text-sidebar-foreground [&>button]:focus-visible:ring-sidebar-ring [&>button]:focus-visible:ring-offset-0'
+          )}
+        >
+          <SheetHeader className="space-y-1 border-b border-sidebar-border/50 bg-sidebar-accent/40 px-6 pb-4 pt-6 text-left backdrop-blur-sm">
+            <SheetTitle className="pr-10 text-lg font-semibold text-sidebar-foreground">Library</SheetTitle>
+            <SheetDescription className="text-sm text-sidebar-foreground/65">
+              Saved components will appear here.
+            </SheetDescription>
           </SheetHeader>
-          <div className="mt-2 flex min-h-0 flex-1 flex-col">
+          <div
+            className={cn(
+              'flex min-h-0 flex-1 flex-col px-6 pb-6 pt-4',
+              'bg-gradient-to-br from-sidebar-accent/45 via-sidebar/85 to-sidebar-accent/70'
+            )}
+          >
             <ComponentLibraryPanel
               entries={libraryEntries}
               onLoad={handleLibraryLoad}
               onRemove={removeEntry}
-              className="max-h-[min(520px,calc(100svh-10rem))]"
+              className="min-h-0 flex-1"
             />
           </div>
         </SheetContent>
@@ -348,19 +363,20 @@ export function BuilderClient() {
                       transition={{ duration: 0.22 }}
                       className="w-full max-w-4xl"
                     >
-                      <Card className="w-full overflow-hidden rounded-2xl border border-border/50 bg-card/90 shadow-sm ring-1 ring-border/30 backdrop-blur-sm">
-                        <CardHeader className="space-y-1.5 border-b border-border/40 bg-muted/15 px-6 py-5 sm:px-8 sm:py-6">
-                          <CardTitle className="text-xl font-semibold tracking-tight">
+                      <Card className="w-full overflow-hidden rounded-2xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-md ring-1 ring-sidebar-border/50">
+                        <CardHeader className="space-y-1.5 border-b border-sidebar-border bg-sidebar-accent/40 px-6 py-5 sm:px-8 sm:py-6">
+                          <CardTitle className="text-xl font-semibold tracking-tight text-sidebar-foreground">
                             Prompt
                           </CardTitle>
-                          <CardDescription className="text-sm leading-relaxed text-muted-foreground">
+                          <CardDescription className="text-sm leading-relaxed text-sidebar-foreground/70">
                             Natural language → generated React component
                           </CardDescription>
                         </CardHeader>
-                        <CardContent className="px-6 pb-7 pt-5 sm:px-9 sm:pb-8 sm:pt-6">
+                        <CardContent className="border-t border-sidebar-border/25 bg-sidebar-accent/10 px-6 pb-7 pt-5 sm:px-9 sm:pb-8 sm:pt-6">
                           <PromptInput
                             ref={promptInputRef}
                             embedded
+                            embeddedVariant="sidebar"
                             onGenerate={(prompt) => void runGenerate(prompt)}
                             isGenerating={false}
                           />

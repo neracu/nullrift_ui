@@ -173,7 +173,7 @@ export function ExportModal({ isOpen, onClose, schema, tuningState }: ExportModa
             type="button"
             variant="ghost"
             size="icon"
-            className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+            className="size-8 shrink-0 text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring"
             onClick={handleClose}
             aria-label="Close export dialog"
           >
@@ -323,7 +323,7 @@ export function ExportModal({ isOpen, onClose, schema, tuningState }: ExportModa
 
           {phase === "generating" && (
             <div className={EXPORT_MODAL_THEME.stateStack}>
-              <Loader2 className="mb-4 size-12 animate-spin text-primary" aria-hidden />
+              <Loader2 className="mb-4 size-12 animate-spin text-sidebar-primary" aria-hidden />
               <p className={EXPORT_MODAL_THEME.stateTitle}>Generating files</p>
               <p className={cn(EXPORT_MODAL_THEME.stateCaption, "mt-2 max-w-sm")}>
                 This may take a moment.
@@ -345,7 +345,12 @@ export function ExportModal({ isOpen, onClose, schema, tuningState }: ExportModa
                 </div>
               </div>
 
-              <CodeViewer files={exportResult.files} title="Generated files" maxHeightClassName="max-h-[min(28rem,50vh)]" />
+              <CodeViewer
+                files={exportResult.files}
+                title="Generated files"
+                maxHeightClassName="max-h-[min(28rem,50vh)]"
+                shell="sidebar"
+              />
             </div>
           )}
 
@@ -359,25 +364,25 @@ export function ExportModal({ isOpen, onClose, schema, tuningState }: ExportModa
         </div>
 
         <div className={EXPORT_MODAL_THEME.footer}>
-          <Button type="button" variant="ghost" onClick={handleClose}>
+          <Button type="button" variant="ghost" className={EXPORT_MODAL_THEME.footerGhost} onClick={handleClose}>
             {phase === "preview" ? "Close" : "Cancel"}
           </Button>
 
           {phase === "config" && (
-            <Button type="button" onClick={handleExport}>
+            <Button type="button" className={EXPORT_MODAL_THEME.footerPrimary} onClick={handleExport}>
               Generate export
             </Button>
           )}
 
           {phase === "preview" && (
-            <Button type="button" onClick={handleDownload}>
+            <Button type="button" className={EXPORT_MODAL_THEME.footerPrimary} onClick={handleDownload}>
               <Download className="mr-2 size-4" />
               Download {exportResult && exportResult.files.length > 1 ? "ZIP" : "file"}
             </Button>
           )}
 
           {phase === "error" && (
-            <Button type="button" onClick={() => setPhase("config")}>
+            <Button type="button" className={EXPORT_MODAL_THEME.footerPrimary} onClick={() => setPhase("config")}>
               Try again
             </Button>
           )}

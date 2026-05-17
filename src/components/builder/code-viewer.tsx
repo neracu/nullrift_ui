@@ -16,18 +16,21 @@ import type { ExportFile } from '@/types/export';
 interface CodeViewerProps {
   /** Files to display */
   files: ExportFile[];
-  
+
   /** Optional title */
   title?: string;
-  
+
   /** Optional className */
   className?: string;
-  
+
   /** Show line numbers */
   showLineNumbers?: boolean;
-  
+
   /** Max height as a Tailwind class (no inline styles) */
   maxHeightClassName?: string;
+
+  /** When `sidebar`, chrome matches builder sidebar / export modal glass shell */
+  shell?: 'default' | 'sidebar';
 }
 
 /**
@@ -39,6 +42,7 @@ export function CodeViewer({
   className = '',
   showLineNumbers = true,
   maxHeightClassName = 'max-h-[min(28rem,50vh)]',
+  shell = 'default',
 }: CodeViewerProps) {
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
@@ -89,16 +93,28 @@ export function CodeViewer({
     return colors[language] || 'text-muted-foreground';
   };
 
+  const isSidebarShell = shell === 'sidebar';
+
   if (files.length === 0) {
     return (
       <div
         className={cn(
-          'rounded-lg border border-border bg-muted/40 p-8 text-center',
+          'rounded-lg border p-8 text-center',
+          isSidebarShell
+            ? 'border-sidebar-border/60 bg-sidebar-accent/20 text-sidebar-foreground/70'
+            : 'border-border bg-muted/40 text-muted-foreground',
           className
         )}
       >
-        <FileCode className="mx-auto mb-4 size-12 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">No files to display</p>
+        <FileCode
+          className={cn(
+            'mx-auto mb-4 size-12',
+            isSidebarShell ? 'text-sidebar-foreground/50' : 'text-muted-foreground'
+          )}
+        />
+        <p className={cn('text-sm', isSidebarShell ? 'text-sidebar-foreground/65' : 'text-muted-foreground')}>
+          No files to display
+        </p>
       </div>
     );
   }
@@ -106,18 +122,38 @@ export function CodeViewer({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-lg border border-border bg-card text-card-foreground',
+        'overflow-hidden rounded-lg border',
+        isSidebarShell
+          ? 'border-sidebar-border/70 bg-sidebar-accent/25 text-sidebar-foreground ring-1 ring-sidebar-border/15'
+          : 'border-border bg-card text-card-foreground',
         className
       )}
     >
       {title && (
-        <div className="border-b border-border bg-muted/30 px-4 py-3">
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <div
+          className={cn(
+            'border-b px-4 py-3',
+            isSidebarShell ? 'border-sidebar-border/50 bg-sidebar-accent/35' : 'border-border bg-muted/30'
+          )}
+        >
+          <h3
+            className={cn(
+              'text-sm font-semibold',
+              isSidebarShell ? 'text-sidebar-foreground' : 'text-foreground'
+            )}
+          >
+            {title}
+          </h3>
         </div>
       )}
 
       {files.length > 1 && (
-        <div className="border-b border-border bg-muted/20">
+        <div
+          className={cn(
+            'border-b',
+            isSidebarShell ? 'border-sidebar-border/50 bg-sidebar-accent/20' : 'border-border bg-muted/20'
+          )}
+        >
           <div className="flex overflow-x-auto">
             {files.map((file, index) => (
               <button
@@ -127,14 +163,25 @@ export function CodeViewer({
                 className={cn(
                   'flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2 text-sm font-medium transition-colors',
                   index === activeFileIndex
-                    ? 'border-primary bg-background text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    ? isSidebarShell
+                      ? 'border-sidebar-primary bg-sidebar-primary/20 text-sidebar-foreground'
+                      : 'border-primary bg-background text-primary'
+                    : isSidebarShell
+                      ? 'border-transparent text-sidebar-foreground/60 hover:bg-sidebar-accent/45 hover:text-sidebar-foreground'
+                      : 'border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
                 <FileCode className="size-4 shrink-0" />
                 <span>{file.name}</span>
                 {file.size && (
-                  <span className="text-xs text-muted-foreground">({formatFileSize(file.size)})</span>
+                  <span
+                    className={cn(
+                      'text-xs',
+                      isSidebarShell ? 'text-sidebar-foreground/55' : 'text-muted-foreground'
+                    )}
+                  >
+                    ({formatFileSize(file.size)})
+                  </span>
                 )}
               </button>
             ))}
@@ -142,13 +189,25 @@ export function CodeViewer({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/25 px-4 py-2">
+      <div
+        className={cn(
+          'flex items-center justify-between gap-2 border-b px-4 py-2',
+          isSidebarShell ? 'border-sidebar-border/50 bg-sidebar-accent/30' : 'border-border bg-muted/25'
+        )}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <span className={cn('text-xs font-medium', getLanguageColor(activeFile.language))}>
             {activeFile.language.toUpperCase()}
           </span>
           {activeFile.path && (
-            <span className="truncate text-xs text-muted-foreground">{activeFile.path}</span>
+            <span
+              className={cn(
+                'truncate text-xs',
+                isSidebarShell ? 'text-sidebar-foreground/55' : 'text-muted-foreground'
+              )}
+            >
+              {activeFile.path}
+            </span>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -156,7 +215,11 @@ export function CodeViewer({
             variant="ghost"
             size="sm"
             onClick={() => handleCopy(activeFile)}
-            className="h-7 text-xs"
+            className={cn(
+              'h-7 text-xs',
+              isSidebarShell &&
+                'text-sidebar-foreground/85 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+            )}
           >
             {copiedFile === activeFile.name ? (
               <>
@@ -174,7 +237,11 @@ export function CodeViewer({
             variant="ghost"
             size="sm"
             onClick={() => handleDownload(activeFile)}
-            className="h-7 text-xs"
+            className={cn(
+              'h-7 text-xs',
+              isSidebarShell &&
+                'text-sidebar-foreground/85 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+            )}
           >
             <Download className="mr-1 size-3" />
             Download
@@ -186,7 +253,7 @@ export function CodeViewer({
         <pre className="p-4 text-sm">
           <code className="font-mono text-zinc-100">
             {showLineNumbers ? (
-              <LineNumberedCode content={activeFile.content} />
+              <LineNumberedCode content={activeFile.content} shell={shell} />
             ) : (
               activeFile.content
             )}
@@ -200,13 +267,27 @@ export function CodeViewer({
 /**
  * Code with line numbers
  */
-function LineNumberedCode({ content }: { content: string }) {
+function LineNumberedCode({
+  content,
+  shell = 'default',
+}: {
+  content: string;
+  shell?: 'default' | 'sidebar';
+}) {
   const lines = content.split('\n');
+  const isSidebarShell = shell === 'sidebar';
 
   return (
     <div className="flex">
       {/* Line numbers */}
-      <div className="select-none border-r border-border pr-4 text-right text-xs text-muted-foreground">
+      <div
+        className={cn(
+          'select-none border-r pr-4 text-right text-xs',
+          isSidebarShell
+            ? 'border-sidebar-border/40 text-sidebar-foreground/45'
+            : 'border-border text-muted-foreground'
+        )}
+      >
         {lines.map((_, index) => (
           <div key={index} className="leading-6">
             {index + 1}

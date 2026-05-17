@@ -32,9 +32,11 @@ export interface BehaviorControlsProps {
 }
 
 const selectTriggerClass =
-  'h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200';
-const selectContentClass = 'border-border bg-popover text-popover-foreground';
-const selectItemClass = 'cursor-pointer focus:bg-accent focus:text-accent-foreground';
+  'h-9 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground transition-colors duration-200';
+const selectContentClass =
+  'border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150';
+const selectItemClass =
+  'cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground';
 
 /**
  * Behavior customization controls (inspector-style sections).
@@ -51,11 +53,11 @@ export function BehaviorControls({
   return (
     <div className="space-y-5">
       <div className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/60">
           Validation
         </p>
         <div className="space-y-2">
-          <Label htmlFor="validation-mode" className="text-xs font-medium text-muted-foreground">
+          <Label htmlFor="validation-mode" className="text-xs font-medium text-sidebar-foreground/65">
             When to validate
           </Label>
           <Select
@@ -81,7 +83,7 @@ export function BehaviorControls({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="validate-debounce" className="text-xs font-medium text-muted-foreground">
+          <Label htmlFor="validate-debounce" className="text-xs font-medium text-sidebar-foreground/65">
             Change debounce
           </Label>
           <Select
@@ -104,19 +106,19 @@ export function BehaviorControls({
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-sidebar-foreground/65">
             Applies only when validation runs on change.
           </p>
         </div>
       </div>
 
-      <Separator className="bg-border" />
+      <Separator className="bg-sidebar-border" />
 
       <div className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Errors</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/60">Errors</p>
 
         <div className="space-y-2">
-          <Label htmlFor="error-position" className="text-xs font-medium text-muted-foreground">
+          <Label htmlFor="error-position" className="text-xs font-medium text-sidebar-foreground/65">
             Error placement
           </Label>
           <Select
@@ -143,14 +145,14 @@ export function BehaviorControls({
 
         <div
           className={cn(
-            'flex items-center justify-between gap-3 rounded-md border border-border/80 bg-muted/30 px-3 py-2.5'
+            'flex items-center justify-between gap-3 rounded-md border border-sidebar-border/80 bg-sidebar-accent/25 px-3 py-2.5'
           )}
         >
           <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="scroll-first-error" className="text-sm font-medium text-foreground">
+            <Label htmlFor="scroll-first-error" className="text-sm font-medium text-sidebar-foreground">
               Scroll to first error
             </Label>
-            <p className="text-xs text-muted-foreground">After submit fails validation</p>
+            <p className="text-xs text-sidebar-foreground/65">After submit fails validation</p>
           </div>
           <Switch
             id="scroll-first-error"
@@ -163,23 +165,23 @@ export function BehaviorControls({
         </div>
       </div>
 
-      <Separator className="bg-border" />
+      <Separator className="bg-sidebar-border" />
 
       <div className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/60">
           Keyboard & focus
         </p>
 
         <div
           className={cn(
-            'flex items-center justify-between gap-3 rounded-md border border-border/80 bg-muted/30 px-3 py-2.5'
+            'flex items-center justify-between gap-3 rounded-md border border-sidebar-border/80 bg-sidebar-accent/25 px-3 py-2.5'
           )}
         >
           <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="auto-focus" className="text-sm font-medium text-foreground">
+            <Label htmlFor="auto-focus" className="text-sm font-medium text-sidebar-foreground">
               Auto-focus first field
             </Label>
-            <p className="text-xs text-muted-foreground">On preview load</p>
+            <p className="text-xs text-sidebar-foreground/65">On preview load</p>
           </div>
           <Switch
             id="auto-focus"
@@ -191,14 +193,14 @@ export function BehaviorControls({
 
         <div
           className={cn(
-            'flex items-center justify-between gap-3 rounded-md border border-border/80 bg-muted/30 px-3 py-2.5'
+            'flex items-center justify-between gap-3 rounded-md border border-sidebar-border/80 bg-sidebar-accent/25 px-3 py-2.5'
           )}
         >
           <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="submit-on-enter" className="text-sm font-medium text-foreground">
+            <Label htmlFor="submit-on-enter" className="text-sm font-medium text-sidebar-foreground">
               Submit on Enter
             </Label>
-            <p className="text-xs text-muted-foreground">Single-line inputs submit the form</p>
+            <p className="text-xs text-sidebar-foreground/65">Single-line inputs submit the form</p>
           </div>
           <Switch
             id="submit-on-enter"
@@ -210,14 +212,14 @@ export function BehaviorControls({
 
         <div
           className={cn(
-            'flex items-center justify-between gap-3 rounded-md border border-border/80 bg-muted/30 px-3 py-2.5'
+            'flex items-center justify-between gap-3 rounded-md border border-sidebar-border/80 bg-sidebar-accent/25 px-3 py-2.5'
           )}
         >
           <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="show-required" className="text-sm font-medium text-foreground">
+            <Label htmlFor="show-required" className="text-sm font-medium text-sidebar-foreground">
               Required indicators
             </Label>
-            <p className="text-xs text-muted-foreground">Asterisk on required labels</p>
+            <p className="text-xs text-sidebar-foreground/65">Asterisk on required labels</p>
           </div>
           <Switch
             id="show-required"
@@ -230,7 +232,7 @@ export function BehaviorControls({
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-sidebar-foreground/65">
         Behavior is stored on the schema and drives the live preview.
       </p>
     </div>

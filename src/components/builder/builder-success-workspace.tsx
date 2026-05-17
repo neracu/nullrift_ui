@@ -280,6 +280,14 @@ export function BuilderSuccessWorkspace({
     onCopyCode(text);
   }, [getActiveCodeText, onCopyCode]);
 
+  const handleTuningToggleClick = useCallback(() => {
+    if (!showTuningPanel) {
+      onOutputViewChange('preview');
+      setCanvasMode('interact');
+    }
+    onToggleTuning();
+  }, [showTuningPanel, onOutputViewChange, onToggleTuning]);
+
   return (
     <motion.div
       initial="hidden"
@@ -328,7 +336,7 @@ export function BuilderSuccessWorkspace({
             type="button"
             variant="outline"
             size="sm"
-            onClick={onToggleTuning}
+            onClick={handleTuningToggleClick}
             className="gap-2"
           >
             <Settings className="h-4 w-4" />
@@ -380,47 +388,49 @@ export function BuilderSuccessWorkspace({
           </div>
 
           <div className={cn(outputView === 'code' ? 'block' : 'hidden')}>
-            <Card>
-              <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
+            <Card className="overflow-hidden border-sidebar-border/70 bg-sidebar/72 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border/25 backdrop-blur-xl backdrop-saturate-150">
+              <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0 border-b border-sidebar-border/50 bg-sidebar-accent/40 pb-4 backdrop-blur-sm">
                 <div>
-                  <CardTitle className="text-lg">Generated code</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg font-semibold text-sidebar-foreground">
+                    Generated code
+                  </CardTitle>
+                  <CardDescription className="text-sidebar-foreground/65">
                     React matches the live preview; Vue and HTML are bundled export previews.
                   </CardDescription>
                 </div>
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={handleCopyActive}
-                  className="cursor-pointer gap-2 transition-colors"
+                  className="cursor-pointer gap-2 border-sidebar-border/80 bg-sidebar-accent/40 text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring"
                 >
                   <Copy className="h-4 w-4" />
                   Copy
                 </Button>
               </CardHeader>
-              <CardContent>
+              <CardContent className="border-t border-sidebar-border/25 bg-sidebar-accent/10 p-6 pt-5">
                 <Tabs
                   value={codeFramework}
                   onValueChange={(v) => setCodeFramework(v as CodeFrameworkTab)}
                   className="w-full"
                 >
-                  <TabsList className="h-9 w-full justify-start sm:w-auto">
+                  <TabsList className="h-9 w-full justify-start rounded-lg border border-sidebar-border/55 bg-sidebar-accent/40 p-1 text-sidebar-foreground/55 backdrop-blur-sm sm:w-auto">
                     <TabsTrigger
                       value="react"
-                      className="cursor-pointer transition-colors data-[state=active]:font-medium"
+                      className="cursor-pointer transition-colors data-[state=active]:bg-sidebar-primary/25 data-[state=active]:font-medium data-[state=active]:text-sidebar-foreground data-[state=active]:shadow-sm hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring"
                     >
                       React
                     </TabsTrigger>
                     <TabsTrigger
                       value="vue"
-                      className="cursor-pointer transition-colors data-[state=active]:font-medium"
+                      className="cursor-pointer transition-colors data-[state=active]:bg-sidebar-primary/25 data-[state=active]:font-medium data-[state=active]:text-sidebar-foreground data-[state=active]:shadow-sm hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring"
                     >
                       Vue
                     </TabsTrigger>
                     <TabsTrigger
                       value="html"
-                      className="cursor-pointer transition-colors data-[state=active]:font-medium"
+                      className="cursor-pointer transition-colors data-[state=active]:bg-sidebar-primary/25 data-[state=active]:font-medium data-[state=active]:text-sidebar-foreground data-[state=active]:shadow-sm hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring"
                     >
                       HTML
                     </TabsTrigger>
@@ -430,8 +440,13 @@ export function BuilderSuccessWorkspace({
                       <Button
                         type="button"
                         size="sm"
-                        variant={reactSnippet === 'component' ? 'secondary' : 'outline'}
-                        className="cursor-pointer transition-colors"
+                        variant="ghost"
+                        className={cn(
+                          'h-8 cursor-pointer rounded-md px-3 text-xs font-medium transition-colors',
+                          reactSnippet === 'component'
+                            ? 'bg-sidebar-primary/25 text-sidebar-foreground shadow-sm'
+                            : 'text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
+                        )}
                         aria-pressed={reactSnippet === 'component'}
                         onClick={() => setReactSnippet('component')}
                       >
@@ -440,8 +455,13 @@ export function BuilderSuccessWorkspace({
                       <Button
                         type="button"
                         size="sm"
-                        variant={reactSnippet === 'types' ? 'secondary' : 'outline'}
-                        className="cursor-pointer transition-colors"
+                        variant="ghost"
+                        className={cn(
+                          'h-8 cursor-pointer rounded-md px-3 text-xs font-medium transition-colors',
+                          reactSnippet === 'types'
+                            ? 'bg-sidebar-primary/25 text-sidebar-foreground shadow-sm'
+                            : 'text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
+                        )}
                         aria-pressed={reactSnippet === 'types'}
                         onClick={() => setReactSnippet('types')}
                       >
@@ -451,8 +471,13 @@ export function BuilderSuccessWorkspace({
                         <Button
                           type="button"
                           size="sm"
-                          variant={reactSnippet === 'styles' ? 'secondary' : 'outline'}
-                          className="cursor-pointer transition-colors"
+                          variant="ghost"
+                          className={cn(
+                            'h-8 cursor-pointer rounded-md px-3 text-xs font-medium transition-colors',
+                            reactSnippet === 'styles'
+                              ? 'bg-sidebar-primary/25 text-sidebar-foreground shadow-sm'
+                              : 'text-sidebar-foreground/55 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
+                          )}
                           aria-pressed={reactSnippet === 'styles'}
                           onClick={() => setReactSnippet('styles')}
                         >
@@ -462,6 +487,7 @@ export function BuilderSuccessWorkspace({
                     </div>
                     {reactSnippet === 'component' ? (
                       <IdeCodeBlock
+                        chrome="sidebar"
                         code={currentCode}
                         lang="tsx"
                         fileLabel={`${tuning.currentSchema.name}.tsx`}
@@ -470,6 +496,7 @@ export function BuilderSuccessWorkspace({
                     ) : null}
                     {reactSnippet === 'types' ? (
                       <IdeCodeBlock
+                        chrome="sidebar"
                         code={generatedPack.types}
                         lang="typescript"
                         fileLabel={`${fileBase}.types.ts`}
@@ -478,6 +505,7 @@ export function BuilderSuccessWorkspace({
                     ) : null}
                     {reactSnippet === 'styles' && hasStylesSnippet ? (
                       <IdeCodeBlock
+                        chrome="sidebar"
                         code={generatedPack.styles ?? ''}
                         lang="css"
                         fileLabel={`${fileBase}.module.css`}
@@ -488,18 +516,19 @@ export function BuilderSuccessWorkspace({
                   <TabsContent value="vue" className="mt-4">
                     {vuePreview.status === 'loading' || vuePreview.status === 'idle' ? (
                       <div
-                        className="max-h-[480px] min-h-[12rem] animate-pulse rounded-md border border-border bg-muted/25 motion-reduce:animate-none"
+                        className="max-h-[480px] min-h-[12rem] animate-pulse rounded-md border border-sidebar-border/70 bg-sidebar-accent/25 motion-reduce:animate-none"
                         aria-busy
                         aria-label="Loading Vue preview"
                       />
                     ) : null}
                     {vuePreview.status === 'error' ? (
-                      <p className="rounded-md border border-dashed border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+                      <p className="rounded-md border border-dashed border-destructive/45 bg-destructive/10 p-4 text-sm text-destructive">
                         {vuePreview.message}
                       </p>
                     ) : null}
                     {vuePreview.status === 'ready' ? (
                       <IdeCodeBlock
+                        chrome="sidebar"
                         code={vuePreview.file.content}
                         lang={exportLanguageToShikiLang(vuePreview.file.language)}
                         fileLabel={vuePreview.file.name}
@@ -510,18 +539,19 @@ export function BuilderSuccessWorkspace({
                   <TabsContent value="html" className="mt-4">
                     {htmlPreview.status === 'loading' || htmlPreview.status === 'idle' ? (
                       <div
-                        className="max-h-[480px] min-h-[12rem] animate-pulse rounded-md border border-border bg-muted/25 motion-reduce:animate-none"
+                        className="max-h-[480px] min-h-[12rem] animate-pulse rounded-md border border-sidebar-border/70 bg-sidebar-accent/25 motion-reduce:animate-none"
                         aria-busy
                         aria-label="Loading HTML preview"
                       />
                     ) : null}
                     {htmlPreview.status === 'error' ? (
-                      <p className="rounded-md border border-dashed border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+                      <p className="rounded-md border border-dashed border-destructive/45 bg-destructive/10 p-4 text-sm text-destructive">
                         {htmlPreview.message}
                       </p>
                     ) : null}
                     {htmlPreview.status === 'ready' ? (
                       <IdeCodeBlock
+                        chrome="sidebar"
                         code={htmlPreview.file.content}
                         lang={exportLanguageToShikiLang(htmlPreview.file.language)}
                         fileLabel={htmlPreview.file.name}

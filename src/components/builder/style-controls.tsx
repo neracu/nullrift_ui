@@ -39,12 +39,13 @@ import {
   PREVIEW_DEFAULT_FORM_SURFACE_LIGHT,
   tryNormalizeUserHex,
 } from '@/lib/tuning/color-contrast';
+import { APP_SHELL_SIDEBAR_HEX } from '@/lib/tuning/app-shell-palette';
 import { cn } from '@/lib/utils';
 
-const DEFAULT_PRIMARY = '#2563eb';
-const DEFAULT_SECONDARY = '#64748b';
-const DEFAULT_BACKGROUND = '#ffffff';
-const DEFAULT_TEXT = '#0f172a';
+const DEFAULT_PRIMARY = APP_SHELL_SIDEBAR_HEX.primary;
+const DEFAULT_SECONDARY = APP_SHELL_SIDEBAR_HEX.secondary;
+const DEFAULT_BACKGROUND = APP_SHELL_SIDEBAR_HEX.background;
+const DEFAULT_TEXT = APP_SHELL_SIDEBAR_HEX.text;
 
 export interface StyleControlsProps {
   styleOverrides: StyleOverrides;
@@ -99,7 +100,7 @@ function HexColorField({ label, value, fallbackHex, onCommit, disabled }: HexCol
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={pickerId} className="text-xs font-medium text-muted-foreground">
+      <Label htmlFor={pickerId} className="text-xs font-medium text-sidebar-foreground/65">
         {label}
       </Label>
       <div className="flex gap-2">
@@ -117,8 +118,8 @@ function HexColorField({ label, value, fallbackHex, onCommit, disabled }: HexCol
           }}
           disabled={disabled}
           className={cn(
-            'h-9 w-16 shrink-0 cursor-pointer rounded-md border border-border',
-            'bg-background disabled:cursor-not-allowed disabled:opacity-50'
+            'h-9 w-16 shrink-0 cursor-pointer rounded-md border border-sidebar-border',
+            'bg-sidebar-accent/30 disabled:cursor-not-allowed disabled:opacity-50'
           )}
         />
         <input
@@ -140,12 +141,12 @@ function HexColorField({ label, value, fallbackHex, onCommit, disabled }: HexCol
           placeholder={fallbackHex}
           aria-invalid={invalid}
           className={cn(
-            'min-w-0 flex-1 rounded-md border bg-background px-2.5 py-1.5',
-            'text-sm text-foreground placeholder:text-muted-foreground',
+            'min-w-0 flex-1 rounded-md border bg-sidebar-accent/25 px-2.5 py-1.5',
+            'text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50',
             'transition-colors duration-200',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar',
             'disabled:cursor-not-allowed disabled:opacity-50',
-            invalid ? 'border-destructive' : 'border-border'
+            invalid ? 'border-destructive' : 'border-sidebar-border'
           )}
         />
       </div>
@@ -160,7 +161,7 @@ function HexColorField({ label, value, fallbackHex, onCommit, disabled }: HexCol
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/60">
       {children}
     </h3>
   );
@@ -196,7 +197,7 @@ export function StyleControls({
       <section className={cn('space-y-3', slotClassNames?.section)}>
         <SectionTitle>Layout</SectionTitle>
         <div className="space-y-2">
-          <Label htmlFor="tuning-theme" className="text-xs font-medium text-muted-foreground">
+          <Label htmlFor="tuning-theme" className="text-xs font-medium text-sidebar-foreground/65">
             Surface theme
           </Label>
           <Select
@@ -208,16 +209,16 @@ export function StyleControls({
           >
             <SelectTrigger
               id="tuning-theme"
-              className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+              className="h-9 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground transition-colors duration-200"
             >
               <SelectValue placeholder="Theme" />
             </SelectTrigger>
-            <SelectContent className="border-border bg-popover text-popover-foreground">
+            <SelectContent className="border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150">
               {THEME_OPTIONS.map((o) => (
                 <SelectItem
                   key={o.value}
                   value={o.value}
-                  className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                  className="cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground"
                 >
                   {o.label}
                 </SelectItem>
@@ -228,7 +229,7 @@ export function StyleControls({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="border-radius" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor="border-radius" className="text-xs font-medium text-sidebar-foreground/65">
               Border radius
             </Label>
             <Select
@@ -240,16 +241,16 @@ export function StyleControls({
             >
               <SelectTrigger
                 id="border-radius"
-                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+                className="h-9 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground transition-colors duration-200"
               >
                 <SelectValue placeholder="Radius" />
               </SelectTrigger>
-              <SelectContent className="border-border bg-popover text-popover-foreground">
+              <SelectContent className="border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150">
                 {BORDER_RADIUS_OPTIONS.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                    className="cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground"
                   >
                     {option.label}
                   </SelectItem>
@@ -259,7 +260,7 @@ export function StyleControls({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="spacing" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor="spacing" className="text-xs font-medium text-sidebar-foreground/65">
               Spacing
             </Label>
             <Select
@@ -271,16 +272,16 @@ export function StyleControls({
             >
               <SelectTrigger
                 id="spacing"
-                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+                className="h-9 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground transition-colors duration-200"
               >
                 <SelectValue placeholder="Spacing" />
               </SelectTrigger>
-              <SelectContent className="border-border bg-popover text-popover-foreground">
+              <SelectContent className="border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150">
                 {SPACING_OPTIONS.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                    className="cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground"
                   >
                     {option.label}
                   </SelectItem>
@@ -291,7 +292,7 @@ export function StyleControls({
         </div>
       </section>
 
-      <Separator className="bg-border" />
+      <Separator className="bg-sidebar-border" />
 
       <section className={cn('space-y-3', slotClassNames?.section)}>
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -300,7 +301,7 @@ export function StyleControls({
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 cursor-pointer text-xs"
+            className="h-8 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-xs text-sidebar-foreground hover:bg-sidebar-accent/45"
             onClick={handleAutoText}
             disabled={disabled}
           >
@@ -324,8 +325,8 @@ export function StyleControls({
                 })
               }
               className={cn(
-                'relative h-8 w-8 cursor-pointer rounded-full border-2 border-border ring-offset-2 ring-offset-background transition-all duration-200',
-                'hover:ring-2 hover:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'relative h-8 w-8 cursor-pointer rounded-full border-2 border-sidebar-border ring-offset-2 ring-offset-sidebar transition-all duration-200',
+                'hover:ring-2 hover:ring-sidebar-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
                 'disabled:cursor-not-allowed disabled:opacity-50'
               )}
               style={{
@@ -368,13 +369,13 @@ export function StyleControls({
         </div>
       </section>
 
-      <Separator className="bg-border" />
+      <Separator className="bg-sidebar-border" />
 
       <section className={cn('space-y-3', slotClassNames?.section)}>
         <SectionTitle>Typography</SectionTitle>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="font-family" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor="font-family" className="text-xs font-medium text-sidebar-foreground/65">
               Font family
             </Label>
             <Select
@@ -386,16 +387,16 @@ export function StyleControls({
             >
               <SelectTrigger
                 id="font-family"
-                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+                className="h-9 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground transition-colors duration-200"
               >
                 <SelectValue placeholder="Font" />
               </SelectTrigger>
-              <SelectContent className="border-border bg-popover text-popover-foreground">
+              <SelectContent className="border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150">
                 {FONT_FAMILY_OPTIONS.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                    className="cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground"
                   >
                     {option.label}
                   </SelectItem>
@@ -405,7 +406,7 @@ export function StyleControls({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="font-size" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor="font-size" className="text-xs font-medium text-sidebar-foreground/65">
               Font size
             </Label>
             <Select
@@ -417,16 +418,16 @@ export function StyleControls({
             >
               <SelectTrigger
                 id="font-size"
-                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+                className="h-9 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground transition-colors duration-200"
               >
                 <SelectValue placeholder="Size" />
               </SelectTrigger>
-              <SelectContent className="border-border bg-popover text-popover-foreground">
+              <SelectContent className="border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150">
                 {FONT_SIZE_OPTIONS.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                    className="cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground"
                   >
                     {option.label}
                   </SelectItem>
@@ -437,13 +438,13 @@ export function StyleControls({
         </div>
       </section>
 
-      <Separator className="bg-border" />
+      <Separator className="bg-sidebar-border" />
 
       <section className={cn('space-y-3', slotClassNames?.section)}>
         <SectionTitle>Submit button</SectionTitle>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="submit-variant" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor="submit-variant" className="text-xs font-medium text-sidebar-foreground/65">
               Style
             </Label>
             <Select
@@ -459,16 +460,16 @@ export function StyleControls({
             >
               <SelectTrigger
                 id="submit-variant"
-                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+                className="h-9 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground transition-colors duration-200"
               >
                 <SelectValue placeholder="Variant" />
               </SelectTrigger>
-              <SelectContent className="border-border bg-popover text-popover-foreground">
+              <SelectContent className="border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150">
                 {SUBMIT_BUTTON_VARIANT_OPTIONS.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                    className="cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground"
                   >
                     {option.label}
                   </SelectItem>
@@ -478,7 +479,7 @@ export function StyleControls({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="submit-size" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor="submit-size" className="text-xs font-medium text-sidebar-foreground/65">
               Size
             </Label>
             <Select
@@ -492,16 +493,16 @@ export function StyleControls({
             >
               <SelectTrigger
                 id="submit-size"
-                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+                className="h-9 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground transition-colors duration-200"
               >
                 <SelectValue placeholder="Size" />
               </SelectTrigger>
-              <SelectContent className="border-border bg-popover text-popover-foreground">
+              <SelectContent className="border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150">
                 {SUBMIT_BUTTON_SIZE_OPTIONS.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                    className="cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground"
                   >
                     {option.label}
                   </SelectItem>
@@ -511,7 +512,7 @@ export function StyleControls({
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="submit-width" className="text-xs font-medium text-muted-foreground">
+            <Label htmlFor="submit-width" className="text-xs font-medium text-sidebar-foreground/65">
               Width
             </Label>
             <Select
@@ -523,16 +524,16 @@ export function StyleControls({
             >
               <SelectTrigger
                 id="submit-width"
-                className="h-9 cursor-pointer border-border bg-background text-foreground transition-colors duration-200"
+                className="h-9 cursor-pointer border-sidebar-border bg-sidebar-accent/25 text-sidebar-foreground transition-colors duration-200"
               >
                 <SelectValue placeholder="Width" />
               </SelectTrigger>
-              <SelectContent className="border-border bg-popover text-popover-foreground">
+              <SelectContent className="border-sidebar-border/70 bg-sidebar/85 text-sidebar-foreground backdrop-blur-xl backdrop-saturate-150">
                 {SUBMIT_BUTTON_WIDTH_OPTIONS.map((option) => (
                   <SelectItem
                     key={String(option.value)}
                     value={String(option.value)}
-                    className="cursor-pointer focus:bg-accent focus:text-accent-foreground"
+                    className="cursor-pointer focus:bg-sidebar-accent focus:text-sidebar-accent-foreground"
                   >
                     {option.label}
                   </SelectItem>
@@ -543,12 +544,12 @@ export function StyleControls({
         </div>
       </section>
 
-      <Separator className="bg-border" />
+      <Separator className="bg-sidebar-border" />
 
       <section className={cn('space-y-3', slotClassNames?.section)}>
         <SectionTitle>Advanced</SectionTitle>
         <div className="space-y-2">
-          <Label htmlFor="custom-classes" className="text-xs font-medium text-muted-foreground">
+          <Label htmlFor="custom-classes" className="text-xs font-medium text-sidebar-foreground/65">
             Extra Tailwind classes
           </Label>
           <Textarea
@@ -557,7 +558,7 @@ export function StyleControls({
             defaultValue={customClassesJoined}
             key={customClassesJoined}
             placeholder="e.g. shadow-lg ring-1 ring-border"
-            className="min-h-[72px] resize-y text-sm transition-colors duration-200"
+            className="min-h-[72px] resize-y border-sidebar-border bg-sidebar-accent/20 text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 transition-colors duration-200 focus-visible:ring-sidebar-ring"
             onBlur={(e) => {
               const parts = e.target.value
                 .split(/[\s,]+/)
@@ -566,14 +567,14 @@ export function StyleControls({
               onStyleChange({ customClasses: parts.length ? parts : undefined });
             }}
           />
-          <p className="text-[11px] text-muted-foreground">Space or comma separated. Applied on blur.</p>
+          <p className="text-[11px] text-sidebar-foreground/65">Space or comma separated. Applied on blur.</p>
         </div>
       </section>
 
       <Button
         type="button"
         variant="outline"
-        className="w-full cursor-pointer transition-colors duration-200"
+        className="w-full cursor-pointer border-sidebar-border bg-sidebar-accent/20 text-sidebar-foreground transition-colors duration-200 hover:bg-sidebar-accent/40"
         onClick={() => onStyleChange({ ...STYLE_PANEL_RESET_VALUES })}
         disabled={disabled}
       >

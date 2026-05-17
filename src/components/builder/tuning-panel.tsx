@@ -108,23 +108,23 @@ export function TuningPanel({
   return (
     <Card
       className={cn(
-        'flex h-full flex-col overflow-hidden border-border bg-card text-card-foreground shadow-sm',
+        'flex h-full min-h-0 flex-col overflow-hidden border-sidebar-border/70 bg-sidebar/72 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border/25 backdrop-blur-xl backdrop-saturate-150',
         className,
         classNames?.card
       )}
     >
       <div
         className={cn(
-          'flex items-center justify-between border-b border-border px-4 py-3',
+          'flex shrink-0 items-center justify-between border-b border-sidebar-border/50 bg-sidebar-accent/40 px-4 py-3.5 backdrop-blur-sm',
           classNames?.header
         )}
       >
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-            <Palette className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-sidebar-foreground">
+            <Palette className="size-4 shrink-0 text-sidebar-primary" aria-hidden />
             <span>UX Tuning</span>
           </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Visual and structure overrides</p>
+          <p className="mt-1 text-xs text-sidebar-foreground/65">Visual and structure overrides</p>
         </div>
 
         {onClose && (
@@ -132,7 +132,7 @@ export function TuningPanel({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+            className="size-8 shrink-0 text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring"
             aria-label="Close tuning panel"
           >
             <X className="size-4" />
@@ -142,7 +142,7 @@ export function TuningPanel({
 
       <div
         className={cn(
-          'flex flex-wrap items-center gap-2 border-b border-border bg-muted/30 px-3 py-2',
+          'flex shrink-0 flex-wrap items-center gap-2 border-b border-sidebar-border/50 bg-sidebar-accent/35 px-3 py-2 backdrop-blur-sm',
           classNames?.toolbar
         )}
       >
@@ -152,7 +152,7 @@ export function TuningPanel({
           onClick={tuning.undo}
           disabled={!tuning.canUndo}
           title="Undo (Ctrl+Z)"
-          className="h-8 gap-1.5 text-xs"
+          className="h-8 gap-1.5 border-sidebar-border/80 bg-sidebar-accent/40 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring disabled:opacity-50"
         >
           <Undo className="size-3.5" />
           Undo
@@ -164,7 +164,7 @@ export function TuningPanel({
           onClick={tuning.redo}
           disabled={!tuning.canRedo}
           title="Redo (Ctrl+Shift+Z)"
-          className="h-8 gap-1.5 text-xs"
+          className="h-8 gap-1.5 border-sidebar-border/80 bg-sidebar-accent/40 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:ring-sidebar-ring disabled:opacity-50"
         >
           <Redo className="size-3.5" />
           Redo
@@ -181,14 +181,19 @@ export function TuningPanel({
             }
           }}
           title="Reset all changes"
-          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+          className="h-8 gap-1.5 border-sidebar-border/80 bg-sidebar-accent/40 text-xs text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/60 hover:text-destructive focus-visible:ring-sidebar-ring disabled:opacity-50"
         >
           <RotateCcw className="size-3.5" />
           Reset
         </Button>
       </div>
 
-      <div className={cn('flex-1 overflow-y-auto', classNames?.scrollArea)}>
+      <div
+        className={cn(
+          'min-h-0 flex-1 overflow-y-auto bg-gradient-to-br from-sidebar-accent/45 via-sidebar/85 to-sidebar-accent/70',
+          classNames?.scrollArea
+        )}
+      >
         {sections.style && (
           <TuningSection title="Style" icon={<Palette className="h-4 w-4" />} defaultOpen={true}>
             <StyleControls
@@ -227,11 +232,11 @@ export function TuningPanel({
 
       <div
         className={cn(
-          'border-t border-border bg-muted/20 px-4 py-2.5',
+          'shrink-0 border-t border-sidebar-border/25 bg-sidebar-accent/10 px-4 py-2.5 backdrop-blur-sm',
           classNames?.footer
         )}
       >
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center justify-between text-xs text-sidebar-foreground/65">
           <span>History: {historyLabel}</span>
           <span>
             {tuning.currentSchema.fields.length} field
@@ -243,20 +248,20 @@ export function TuningPanel({
       {process.env.NODE_ENV === 'development' && (
         <details
           className={cn(
-            'border-t border-border bg-muted/15 px-4 py-2',
+            'shrink-0 border-t border-sidebar-border/25 bg-sidebar-accent/10 px-4 py-2 backdrop-blur-sm',
             classNames?.debug
           )}
         >
-          <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+          <summary className="cursor-pointer text-xs text-sidebar-foreground/65 hover:text-sidebar-foreground">
             Debug Info
           </summary>
-          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+          <div className="mt-2 space-y-1 text-xs text-sidebar-foreground/65">
             <div>Component ID: {tuning.state.componentId}</div>
             <div>Can Undo: {tuning.canUndo ? 'Yes' : 'No'}</div>
             <div>Can Redo: {tuning.canRedo ? 'Yes' : 'No'}</div>
             <div>
               Style Overrides:
-              <pre className="mt-1 rounded-md border border-border bg-muted/40 p-2 text-[10px] text-foreground">
+              <pre className="mt-1 rounded-md border border-sidebar-border/55 bg-sidebar-accent/40 p-2 text-[10px] text-sidebar-foreground">
                 {JSON.stringify(tuning.state.styleOverrides, null, 2)}
               </pre>
             </div>

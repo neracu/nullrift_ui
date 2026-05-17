@@ -33,27 +33,31 @@ function truncatePrompt(text: string): string {
 export function ComponentLibraryPanel({ entries, onLoad, onRemove, className }: ComponentLibraryPanelProps) {
   if (entries.length === 0) {
     return (
-      <div className={cn('mt-6 flex-1', className)}>
-        <p className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
-          Nothing saved yet. After you generate a component, use <span className="font-medium text-foreground/80">Save to library</span> in the workspace toolbar.
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
+        <p className="rounded-lg border border-dashed border-sidebar-border/55 bg-sidebar-accent/20 px-4 py-10 text-center text-sm text-sidebar-foreground/70 backdrop-blur-sm">
+          Nothing saved yet. After you generate a component, use{' '}
+          <span className="font-medium text-sidebar-foreground">Save to library</span> in the workspace toolbar.
         </p>
       </div>
     );
   }
 
   return (
-    <ScrollArea className={cn('mt-6 min-h-0 flex-1 pr-3', className)}>
-      <ul className="flex flex-col gap-2 pb-2">
+    <ScrollArea className={cn('min-h-0 flex-1 pr-2', className)}>
+      <ul className="flex flex-col gap-2 pb-2 pr-1">
         {entries.map((entry) => (
           <li
             key={entry.entryId}
-            className="flex items-stretch gap-2 rounded-lg border border-border/80 bg-muted/10 px-3 py-2.5"
+            className="flex items-stretch gap-2 rounded-lg border border-sidebar-border/55 bg-sidebar-accent/30 px-3 py-2.5 shadow-sm ring-1 ring-sidebar-border/15 backdrop-blur-sm"
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">{entry.schema.name}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{formatSavedAt(entry.savedAt)}</p>
+              <p className="truncate text-sm font-medium text-sidebar-foreground">{entry.schema.name}</p>
+              <p className="mt-0.5 text-xs text-sidebar-foreground/60">{formatSavedAt(entry.savedAt)}</p>
               {entry.sourcePrompt ? (
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground/90" title={entry.sourcePrompt}>
+                <p
+                  className="mt-1 line-clamp-2 text-xs text-sidebar-foreground/70"
+                  title={entry.sourcePrompt}
+                >
                   {truncatePrompt(entry.sourcePrompt)}
                 </p>
               ) : null}
@@ -63,13 +67,18 @@ export function ComponentLibraryPanel({ entries, onLoad, onRemove, className }: 
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="size-8 text-sidebar-foreground/55 hover:bg-destructive/15 hover:text-destructive"
                 aria-label={`Remove ${entry.schema.name} from library`}
                 onClick={() => onRemove(entry.entryId)}
               >
                 <Trash2 className="size-4" />
               </Button>
-              <Button type="button" variant="secondary" size="sm" className="h-8 px-2 text-xs" onClick={() => onLoad(entry)}>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 border-0 bg-sidebar-primary px-2 text-xs text-sidebar-primary-foreground shadow-sm hover:bg-sidebar-primary/90 focus-visible:ring-sidebar-ring"
+                onClick={() => onLoad(entry)}
+              >
                 Load
               </Button>
             </div>
